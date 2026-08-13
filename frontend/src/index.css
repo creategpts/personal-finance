@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* semantic color tokens — flipped under .dark */
+:root {
+  --canvas: #fafafa;
+  --surface: #ffffff;
+  --surface2: #f4f4f5;
+  --line: #e5e5e5;
+  --linesoft: #f0f0f0;
+  --fg: #171717;
+  --muted: #737373;
+  --faint: #a3a3a3;
+  --primary: #171717;
+  --primaryfg: #ffffff;
+}
+
+.dark {
+  --canvas: #0a0a0a;
+  --surface: #131313;
+  --surface2: #1c1c1e;
+  --line: #2a2a2a;
+  --linesoft: #212121;
+  --fg: #ededed;
+  --muted: #9a9a9a;
+  --faint: #6b6b6b;
+  --primary: #ededed;
+  --primaryfg: #0a0a0a;
+}
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --color-accent: #0070f3;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-line: var(--line);
+  --color-linesoft: var(--linesoft);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-primaryfg: var(--primaryfg);
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body {
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    letter-spacing: -0.011em;
+  }
+  h1, h2, h3 { letter-spacing: -0.02em; }
+  /* keyboard focus only — inputs carry their own ring via .input */
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* native date/time picker icon is dark by default — invisible on a dark input */
+  .dark input[type="date"], .dark input[type="datetime-local"], .dark input[type="time"] {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-line bg-surface; }
+
+  /* monetary + numeric figures: tabular so columns line up */
+  .num { font-variant-numeric: tabular-nums; }
+
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg outline-none transition;
+    @apply placeholder:text-faint focus:border-faint focus:ring-4 focus:ring-fg/10;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-fg transition hover:bg-surface2 disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primaryfg transition hover:opacity-90 disabled:opacity-40;
+  }
+
+  /* shared table chrome — padding/border only, so cell utilities (text-right, colors) still win */
+  .tbl { @apply w-full text-sm; }
+  .tbl thead { @apply bg-surface2; }
+  .tbl thead th { @apply px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted; }
+  .tbl tbody tr { @apply border-t border-linesoft transition; }
+  .tbl tbody td { @apply px-4 py-3 text-fg; }
+}
+
+/* Recharts gives clicked bars/cells a focus outline — suppress it */
+.recharts-wrapper :focus {
+  outline: none;
+}
