@@ -13,6 +13,10 @@ Ver [CONTEXT.md](./CONTEXT.md) para el glosario de dominio (Movimiento, Cuenta, 
 
 Requisitos: Python 3.11+, Node 20+. Sin base de datos externa ni variables de entorno obligatorias.
 
+**Acceso directo**: doble click en [`start.command`](./start.command) (macOS) arranca backend y frontend a la vez y abre `http://localhost:5173` en el navegador. La primera vez crea el venv e instala dependencias solo; tarda un poco más. Cierra la ventana de Terminal o pulsa Ctrl+C para parar ambos.
+
+O manualmente:
+
 **Backend** (terminal 1):
 
 ```bash
