@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bar,
   BarChart,
@@ -206,7 +206,12 @@ export default function Panel() {
         <StatTile label="Inversión" value={summary?.total_investments ?? 0} info={KPI_INFO.investment} onClick={() => goToKpi('investment')} />
       </div>
 
-      <h2 className="mb-3 text-base font-semibold tracking-tight text-fg">Gasto por categoría</h2>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <h2 className="text-base font-semibold tracking-tight text-fg">Gasto por categoría</h2>
+        <Link to="/analisis" className="text-sm font-medium text-muted transition hover:text-fg">
+          Ver análisis →
+        </Link>
+      </div>
       <div className="card p-5">
         <div className="grid gap-4 md:grid-cols-[280px_minmax(0,1fr)]">
           {targetYear > 0 && (

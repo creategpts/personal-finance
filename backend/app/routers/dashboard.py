@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -207,3 +207,87 @@ def budget_vs_actual(from_date: date, to_date: date, db: Session = Depends(get_d
         key=lambda item: item.planned + item.actual,
         reverse=True,
     )
+
+
+@router.get("/breakdown", response_model=list[schemas.CategoryBreakdownItem])
+def breakdown(from_date: date, to_date: date, kpi: str, db: Session = Depends(get_db)):
+    """Per-category totals for the Análisis donuts: expense rolls subcategory spend up
+    into its top-level category (same rule as budget-vs-actual); income has no
+    subcategories so it's a plain group-by."""
+    if kpi not in ("expense", "income"):
+        raise HTTPException(status_code=400, detail="kpi debe ser 'expense' o 'income'")
+
+    names = category_name_sets(db)
+    rollup = _rollup_names(db)
+    categories_by_name = {c.name: c for c in db.query(models.Category).all()}
+
+    done = (
+        db.query(models.Movement)
+        .filter(
+            models.Movement.date >= from_date,
+            models.Movement.date <= to_date,
+            models.Movement.status == models.MovementStatus.done,
+        )
+        .all()
+    )
+
+    by_category: dict[str, float] = {}
+    for m in done:
+        if not matches_kpi(m, kpi, names):
+            continue
+        raw = m.destination if kpi == "expense" else m.origin
+        category = rollup.get(raw, raw)
+        by_category[category] = by_category.get(category, 0.0) + kpi_amount(m, kpi, names)
+
+    items = []
+    for category, amount in by_category.items():
+        cat = categories_by_name.get(category)
+        items.append(
+            schemas.CategoryBreakdownItem(
+                category=category,
+                amount=amount,
+                color=cat.color if cat else "#6b7280",
+                icon=cat.icon if cat else "Tag",
+                es_pasivo=bool(cat.es_pasivo) if cat else False,
+            )
+        )
+    items.sort(key=lambda i: i.amount, reverse=True)
+    return items
+
+
+@router.get("/top-destinations", response_model=list[schemas.TopDestinationItem])
+def top_destinations(from_date: date, to_date: date, limit: int = 10, db: Session = Depends(get_db)):
+    """Top N expense destinations, at whatever level they were actually logged at (no
+    rollup) — a subcategory shows on its own row, colored like its parent."""
+    names = category_name_sets(db)
+    categories = db.query(models.Category).all()
+    categories_by_name = {c.name: c for c in categories}
+    categories_by_id = {c.id: c for c in categories}
+
+    done = (
+        db.query(models.Movement)
+        .filter(
+            models.Movement.date >= from_date,
+            models.Movement.date <= to_date,
+            models.Movement.status == models.MovementStatus.done,
+        )
+        .all()
+    )
+
+    by_destination: dict[str, float] = {}
+    for m in done:
+        if not matches_kpi(m, "expense", names):
+            continue
+        by_destination[m.destination] = by_destination.get(m.destination, 0.0) + m.amount
+
+    items = []
+    for destination, amount in by_destination.items():
+        cat = categories_by_name.get(destination)
+        color = "#6b7280"
+        if cat:
+            parent = categories_by_id.get(cat.parent_id) if cat.parent_id else None
+            color = parent.color if parent else cat.color
+        items.append(schemas.TopDestinationItem(destination=destination, amount=amount, color=color))
+
+    items.sort(key=lambda i: i.amount, reverse=True)
+    return items[: max(1, min(limit, 50))]

@@ -64,6 +64,20 @@ export interface BudgetVsActualItem {
   actual: number
 }
 
+export interface CategoryBreakdownItem {
+  category: string
+  amount: number
+  color: string
+  icon: string
+  es_pasivo: boolean
+}
+
+export interface TopDestinationItem {
+  destination: string
+  amount: number
+  color: string
+}
+
 export interface NetWorthPoint {
   month: string // "YYYY-MM"
   total: number
@@ -212,6 +226,10 @@ export const api = {
       request<BudgetVsActualItem[]>(`/dashboard/budget-vs-actual?from_date=${fromDate}&to_date=${toDate}`),
     netWorth: (months: number) => request<NetWorthPoint[]>(`/dashboard/net-worth?months=${months}`),
     monthlySeries: (months: number) => request<MonthlyKpiPoint[]>(`/dashboard/monthly-series?months=${months}`),
+    breakdown: (fromDate: string, toDate: string, kpi: 'expense' | 'income') =>
+      request<CategoryBreakdownItem[]>(`/dashboard/breakdown?from_date=${fromDate}&to_date=${toDate}&kpi=${kpi}`),
+    topDestinations: (fromDate: string, toDate: string, limit = 10) =>
+      request<TopDestinationItem[]>(`/dashboard/top-destinations?from_date=${fromDate}&to_date=${toDate}&limit=${limit}`),
   },
   budgets: {
     get: (year: number, month: number) =>

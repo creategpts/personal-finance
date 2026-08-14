@@ -104,17 +104,27 @@ export default function Movimientos() {
   const origins = categories.filter((c) => isOrigin(c.type))
   const destinations = categories.filter((c) => isDestination(c.type))
 
+  // Destino puede ser una categoría principal (p. ej. "Vivienda", agregada en Análisis)
+  // cuyos movimientos reales están etiquetados con sus subcategorías ("Renting/Leasing"...).
+  // Filtrar por igualdad estricta dejaría esos movimientos fuera — se incluyen también.
+  const destinationMatchSet = useMemo(() => {
+    if (fDestination === 'All') return null
+    const parent = categories.find((c) => c.name === fDestination)
+    const childNames = parent ? categories.filter((c) => c.parent_id === parent.id).map((c) => c.name) : []
+    return new Set([fDestination, ...childNames])
+  }, [fDestination, categories])
+
   const sorted = useMemo(() => {
     const min = fMin === '' ? -Infinity : Number(fMin)
     const max = fMax === '' ? Infinity : Number(fMax)
     return movements
       .filter((m) => fStatus === 'All' || m.status === fStatus)
       .filter((m) => fOrigin === 'All' || m.origin === fOrigin)
-      .filter((m) => fDestination === 'All' || m.destination === fDestination)
+      .filter((m) => !destinationMatchSet || destinationMatchSet.has(m.destination))
       .filter((m) => (!fFrom || m.date >= fFrom) && (!fTo || m.date <= fTo))
       .filter((m) => m.amount >= min && m.amount <= max)
       .sort((a, b) => (sortDir === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)))
-  }, [movements, sortDir, fStatus, fOrigin, fDestination, fFrom, fTo, fMin, fMax])
+  }, [movements, sortDir, fStatus, fOrigin, destinationMatchSet, fFrom, fTo, fMin, fMax])
 
   // Periodo is a baseline view control (always applies a range, has its own "Hoy"
   // reset), not an optional filter — it doesn't count toward hasFilters/Limpiar.

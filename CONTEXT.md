@@ -61,7 +61,7 @@ El campo `concept` de un Movimiento es una etiqueta de texto libre puesta por el
 
 - **Panel**: dashboard con KPIs del mes/periodo.
 - **Movimientos**: alta/edición/listado de Movimientos, import CSV.
-- **Evolución**: series temporales de cuentas/indicadores.
+- **Análisis**: 3 pestañas — Gasto (por categoría, top destinos, tendencia mensual, gasto vs presupuesto), Ingreso (por categoría), Patrimonio (evolución temporal y saldo de hoy, solo cuentas Ahorro/Inversión — Efectivo/gasto queda fuera, eso es liquidez, no patrimonio).
 - **Planificación**: Presupuestos, Gastos recurrentes, Metas.
 - **Configuración**: Categorías/Cuentas, Settings (nombre app/usuario, favicon), backups.
 

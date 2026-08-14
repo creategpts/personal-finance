@@ -113,6 +113,20 @@ class BudgetVsActualItem(BaseModel):
     actual: float
 
 
+class CategoryBreakdownItem(BaseModel):
+    category: str
+    amount: float
+    color: str
+    icon: str
+    es_pasivo: bool = False  # income only: flags a passive-income category
+
+
+class TopDestinationItem(BaseModel):
+    destination: str
+    amount: float
+    color: str  # a subcategory inherits its parent's color, matching the rest of the app
+
+
 class NetWorthPoint(BaseModel):
     month: str  # "YYYY-MM"
     total: float
