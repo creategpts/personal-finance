@@ -43,6 +43,8 @@ Cierra y vuelve a abrir la terminal después de instalar para que reconozca los 
 
 `Life Track.app` no se commitea (está en `.gitignore`) — cada máquina genera el suyo al ejecutar `desktop.command`, así que no lleva rutas de nadie más ni carga la cuarentena de Gatekeeper de un `.app` movido/descargado. macOS pedirá permiso de acceso a la carpeta Documentos la primera vez que lo abras (si el repo vive ahí) — acéptalo, si no lo haces `desktop.command` sigue funcionando igual, solo que el `.app` no arranca.
 
+**App de escritorio (Windows)**: doble click en [`desktop.bat`](./desktop.bat) — mismo mecanismo (pywebview), ventana propia sin barra de navegador. La primera vez instala dependencias y construye el frontend; la consola se cierra sola al terminar, la app queda abierta en su ventana. Para arrancarla sin que se vea ni un instante la consola, usa [`Life Track.vbs`](./Life%20Track.vbs) (llama a `desktop.bat` oculto) — pero la primera vez conviene usar `desktop.bat` directamente, para ver si falta algo por instalar.
+
 O manualmente:
 
 **Backend** (terminal 1):
