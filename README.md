@@ -9,11 +9,35 @@ Ver [CONTEXT.md](./CONTEXT.md) para el glosario de dominio (Movimiento, Cuenta, 
 - **Backend**: FastAPI + SQLAlchemy + SQLite (`backend/`)
 - **Frontend**: React + TypeScript + Vite + Tailwind (`frontend/`)
 
+## Requisitos previos
+
+Necesitas **Python 3.11+** y **Node.js 20+**. Sin base de datos externa ni variables de entorno obligatorias.
+
+**macOS** — con [Homebrew](https://brew.sh):
+
+```bash
+brew install python node
+```
+
+Sin Homebrew, instaladores directos: [Python](https://www.python.org/downloads/) · [Node.js](https://nodejs.org/) (versión LTS).
+
+**Windows** — con winget (viene con Windows 10/11), en PowerShell:
+
+```powershell
+winget install Python.Python.3.12
+winget install OpenJS.NodeJS.LTS
+```
+
+Sin winget, instaladores directos: [Python](https://www.python.org/downloads/) (marca "Add python.exe to PATH" durante la instalación) · [Node.js](https://nodejs.org/) (versión LTS).
+
+Cierra y vuelve a abrir la terminal después de instalar para que reconozca los comandos nuevos.
+
 ## Arrancar en local
 
-Requisitos: Python 3.11+, Node 20+. Sin base de datos externa ni variables de entorno obligatorias.
+**Acceso directo**: doble click en [`start.command`](./start.command) (macOS) o [`start.bat`](./start.bat) (Windows) — arranca backend y frontend a la vez y abre `http://localhost:5173` en el navegador. La primera vez crea el entorno e instala dependencias solo; tarda un poco más.
 
-**Acceso directo**: doble click en [`start.command`](./start.command) (macOS) arranca backend y frontend a la vez y abre `http://localhost:5173` en el navegador. La primera vez crea el venv e instala dependencias solo; tarda un poco más. Cierra la ventana de Terminal o pulsa Ctrl+C para parar ambos.
+- macOS: cierra la ventana de Terminal o pulsa Ctrl+C para parar ambos.
+- Windows: abre dos ventanas (Backend/Frontend) — ciérralas para parar cada una.
 
 O manualmente:
 
