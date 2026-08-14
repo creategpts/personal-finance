@@ -66,6 +66,16 @@ class Category(Base):
     # Drives the Activo/Pasivo split on the dashboard. Replaces the old hardcoded
     # "passive = category named Intereses" rule.
     es_pasivo = Column(Boolean, nullable=False, default=False)
+    # subcategory support (expense categories only): the top-level expense category
+    # this one nests under. NULL = top-level. Exactly 2 levels — a category that is
+    # itself a subcategory (parent_id set) can't have children of its own.
+    parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    # display only. `icon` is a lucide-react icon name (e.g. "Utensils"), not an emoji —
+    # rendered via <CategoryIcon> on the frontend. A subcategory has no icon/color of its
+    # own — the UI always shows its parent's, so these are only meaningful (and only
+    # editable) on a top-level category.
+    icon = Column(String, nullable=False, default="Tag")
+    color = Column(String, nullable=False, default="#6b7280")
 
 
 class Setting(Base):

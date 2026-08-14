@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { api, type Category, type CategoryType } from '../api'
 import { isAccount } from '../categoryTypes'
 import { ACCOUNT_TYPES, typeLabel as typeLabelOf } from '../accountTypes'
 import InfoHint from '../components/InfoHint'
 import CategoryModal from '../components/CategoryModal'
+import CategoryIcon from '../components/CategoryIcon'
 import { useSettings, saveSettings } from '../settings'
 
 function SimpleCategoryList({
@@ -22,12 +23,39 @@ function SimpleCategoryList({
   onChanged: () => void
 }) {
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
+  // ids the user has explicitly collapsed — everything is expanded by default
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const items = categories.filter((c) => c.type === type)
   const countKey = type === 'income' ? 'es_ingreso' : 'es_gasto'
   const countHeader = type === 'income' ? 'Es ingreso' : 'Es gasto'
   const isIncome = type === 'income'
+  const isExpense = type === 'expense'
 
-  async function save(data: { name: string; type: CategoryType; visible: boolean; initial_balance: number }) {
+  // expense-only: subcategory tree (2 levels — see backend validation for why).
+  const topLevel = isExpense ? items.filter((c) => c.parent_id === null) : items
+  const childrenOf = (parentId: number) => items.filter((c) => c.parent_id === parentId)
+  const parentOptions = isExpense
+    ? topLevel.filter((c) => c.id !== (editing !== 'new' ? editing?.id : undefined)).map((c) => ({ value: c.id, label: c.name }))
+    : undefined
+
+  function toggleCollapsed(id: number) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function save(data: {
+    name: string
+    type: CategoryType
+    visible: boolean
+    initial_balance: number
+    parent_id: number | null
+    icon: string
+    color: string
+  }) {
     if (editing && editing !== 'new') {
       // merge over existing: the modal only edits name/type/visible/balance; spreading
       // keeps the toggle flags (es_ingreso/es_gasto/es_pasivo/include_in_total) intact.
@@ -46,8 +74,12 @@ function SimpleCategoryList({
 
   async function remove(id: number) {
     if (!confirm('¿Eliminar esta categoría?')) return
-    await api.categories.remove(id)
-    onChanged()
+    try {
+      await api.categories.remove(id)
+      onChanged()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar')
+    }
   }
 
   async function toggleCount(c: Category) {
@@ -55,11 +87,20 @@ function SimpleCategoryList({
     onChanged()
   }
 
+  const badge = (icon: string, color: string, size: 'md' | 'sm' = 'md') => (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-md ${size === 'md' ? 'h-7 w-7' : 'h-6 w-6'}`}
+      style={{ backgroundColor: `${color}26`, color }}
+    >
+      <CategoryIcon name={icon} size={size === 'md' ? 16 : 13} />
+    </span>
+  )
+
   return (
-    <div>
-      <div className="card overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="card min-h-0 flex-1 overflow-auto">
         <table className="tbl">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr>
               <th>
                 <span className="inline-flex items-center gap-1">
@@ -72,48 +113,125 @@ function SimpleCategoryList({
             </tr>
           </thead>
           <tbody>
-            {items.map((c) => (
-              <tr
-                key={c.id}
-                onClick={() => setEditing(c)}
-                className="cursor-pointer hover:bg-surface2"
-              >
-                <td className="font-medium text-fg">{c.name}</td>
-                {isIncome && (
-                  <td>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        togglePasivo(c)
-                      }}
-                      title="Ingreso pasivo (intereses, dividendos, alquiler) vs activo (trabajo)"
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        c.es_pasivo
-                          ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400'
-                          : 'bg-surface2 text-muted'
-                      }`}
-                    >
-                      {c.es_pasivo ? 'Pasivo' : 'Activo'}
-                    </button>
-                  </td>
-                )}
-                <td>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleCount(c)
-                    }}
-                    title={`${countHeader}: click para cambiar`}
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      c[countKey] ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
-                    }`}
+            {isExpense
+              ? topLevel.map((c) => {
+                  const children = childrenOf(c.id)
+                  const open = !collapsed.has(c.id)
+                  return (
+                    <Fragment key={c.id}>
+                      <tr onClick={() => setEditing(c)} className="cursor-pointer hover:bg-surface2">
+                        <td className="font-medium text-fg">
+                          <span className="flex items-center gap-2">
+                            {badge(c.icon, c.color)}
+                            {c.name}
+                            {children.length > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleCollapsed(c.id)
+                                }}
+                                className="inline-flex items-center gap-1 text-xs text-faint hover:text-fg"
+                              >
+                                ({children.length}) {open ? '▾' : '▸'}
+                              </button>
+                            )}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleCount(c)
+                            }}
+                            title={`${countHeader}: click para cambiar`}
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              c[countKey] ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                            }`}
+                          >
+                            {c[countKey] ? 'Sí' : 'No'}
+                          </button>
+                        </td>
+                      </tr>
+                      {open &&
+                        children.map((sub) => (
+                          <tr
+                            key={sub.id}
+                            onClick={() => setEditing(sub)}
+                            className="cursor-pointer bg-surface2/40 hover:bg-surface2"
+                          >
+                            <td className="pl-6 text-fg">
+                              <span className="flex items-center gap-2">
+                                <span className="text-xs text-faint">└</span>
+                                {badge(c.icon, c.color, 'sm')}
+                                {sub.name}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleCount(sub)
+                                }}
+                                title={`${countHeader}: click para cambiar`}
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  sub[countKey] ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                                }`}
+                              >
+                                {sub[countKey] ? 'Sí' : 'No'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </Fragment>
+                  )
+                })
+              : items.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => setEditing(c)}
+                    className="cursor-pointer hover:bg-surface2"
                   >
-                    {c[countKey] ? 'Sí' : 'No'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
+                    <td className="font-medium text-fg">
+                      <span className="flex items-center gap-2">
+                        {badge(c.icon, c.color)}
+                        {c.name}
+                      </span>
+                    </td>
+                    {isIncome && (
+                      <td>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            togglePasivo(c)
+                          }}
+                          title="Ingreso pasivo (intereses, dividendos, alquiler) vs activo (trabajo)"
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            c.es_pasivo
+                              ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400'
+                              : 'bg-surface2 text-muted'
+                          }`}
+                        >
+                          {c.es_pasivo ? 'Pasivo' : 'Activo'}
+                        </button>
+                      </td>
+                    )}
+                    <td>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleCount(c)
+                        }}
+                        title={`${countHeader}: click para cambiar`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          c[countKey] ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                        }`}
+                      >
+                        {c[countKey] ? 'Sí' : 'No'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            {(isExpense ? topLevel.length === 0 : items.length === 0) && (
               <tr>
                 <td colSpan={isIncome ? 3 : 2} className="px-4 py-10 text-center text-faint">
                   Sin categorías
@@ -124,7 +242,7 @@ function SimpleCategoryList({
         </table>
       </div>
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex shrink-0 justify-end">
         <button onClick={() => setEditing('new')} className="btn-primary">
           + Añadir
         </button>
@@ -135,6 +253,7 @@ function SimpleCategoryList({
           title={editing === 'new' ? `Nueva categoría de ${title.toLowerCase()}` : 'Editar categoría'}
           initial={editing === 'new' ? null : editing}
           fixedType={type}
+          parentOptions={parentOptions}
           onClose={() => setEditing(null)}
           onDelete={
             editing !== 'new'
@@ -155,7 +274,15 @@ function CuentasSection({ categories, onChanged }: { categories: Category[]; onC
   const items = categories.filter((c) => isAccount(c.type))
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
 
-  async function save(data: { name: string; type: CategoryType; visible: boolean; initial_balance: number }) {
+  async function save(data: {
+    name: string
+    type: CategoryType
+    visible: boolean
+    initial_balance: number
+    parent_id: number | null
+    icon: string
+    color: string
+  }) {
     if (editing && editing !== 'new') {
       // merge over existing so include_in_total/visible survive a rename (see SimpleCategoryList)
       await api.categories.update(editing.id, { ...editing, ...data })
@@ -214,7 +341,17 @@ function CuentasSection({ categories, onChanged }: { categories: Category[]; onC
                 onClick={() => setEditing(c)}
                 className={`cursor-pointer hover:bg-surface2 ${c.visible ? '' : 'opacity-50'}`}
               >
-                <td className="font-medium text-fg">{c.name}</td>
+                <td className="font-medium text-fg">
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                      style={{ backgroundColor: `${c.color}26`, color: c.color }}
+                    >
+                      <CategoryIcon name={c.icon} size={13} />
+                    </span>
+                    {c.name}
+                  </span>
+                </td>
                 <td className="text-faint">{typeLabel(c.type)}</td>
                 <td>
                   <button
@@ -445,10 +582,10 @@ export default function Configuracion() {
   useEffect(refresh, [])
 
   return (
-    <div>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Configuración</h1>
+    <div className="flex h-full flex-col">
+      <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Configuración</h1>
 
-      <div className="mb-5 inline-flex gap-0.5 rounded-lg border border-line bg-surface p-0.5">
+      <div className="mb-5 inline-flex shrink-0 gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
         {([
           ['general', 'General'],
           ['cuentas', 'Cuentas'],
@@ -467,32 +604,34 @@ export default function Configuracion() {
         ))}
       </div>
 
-      {tab === 'general' && <GeneralSection />}
+      <div className="min-h-0 flex-1">
+        {tab === 'general' && <GeneralSection />}
 
-      {tab === 'cuentas' && <CuentasSection categories={categories} onChanged={refresh} />}
+        {tab === 'cuentas' && <CuentasSection categories={categories} onChanged={refresh} />}
 
-      {tab === 'categorias' && (
-        <div className="grid grid-cols-2 gap-4">
-          <SimpleCategoryList
-            title="Ingresos"
-            columnLabel="Orígenes"
-            info="Categorías de ingreso: solo pueden ser Origen de un movimiento, nunca Destino. El dinero entra a una cuenta desde aquí."
-            type="income"
-            categories={categories}
-            onChanged={refresh}
-          />
-          <SimpleCategoryList
-            title="Gastos"
-            columnLabel="Destinos"
-            info="Categorías de gasto: solo pueden ser Destino de un movimiento, nunca Origen. El dinero sale de una cuenta hacia aquí."
-            type="expense"
-            categories={categories}
-            onChanged={refresh}
-          />
-        </div>
-      )}
+        {tab === 'categorias' && (
+          <div className="flex h-full min-h-0 gap-4">
+            <SimpleCategoryList
+              title="Ingresos"
+              columnLabel="Orígenes"
+              info="Categorías de ingreso: solo pueden ser Origen de un movimiento, nunca Destino. El dinero entra a una cuenta desde aquí."
+              type="income"
+              categories={categories}
+              onChanged={refresh}
+            />
+            <SimpleCategoryList
+              title="Gastos"
+              columnLabel="Destinos"
+              info="Categorías de gasto: solo pueden ser Destino de un movimiento, nunca Origen. El dinero sale de una cuenta hacia aquí."
+              type="expense"
+              categories={categories}
+              onChanged={refresh}
+            />
+          </div>
+        )}
 
-      {tab === 'backup' && <BackupSection />}
+        {tab === 'backup' && <BackupSection />}
+      </div>
     </div>
   )
 }

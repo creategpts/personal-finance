@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Category, RecurringExpense, RecurringExpenseInput } from '../api'
 import { isOrigin, isDestination } from '../categoryTypes'
 import { TrashIcon } from './Icons'
+import Modal from './Modal'
 
 interface Props {
   categories: Category[]
@@ -44,13 +45,6 @@ export default function RecurringModal({ categories, initial, defaultOrigin, onC
     active !== (initial?.active ?? true) ||
     autoGenerate !== (initial?.auto_generate ?? true)
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [])
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -71,43 +65,71 @@ export default function RecurringModal({ categories, initial, defaultOrigin, onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-2xl"
-      >
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {initial ? 'Editar movimiento recurrente' : 'Nuevo movimiento recurrente'}
-          </h2>
+    <Modal
+      title={initial ? 'Editar movimiento recurrente' : 'Nuevo movimiento recurrente'}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      headerAction={
+        <button type="submit" disabled={!dirty || saving} className={`btn-primary ${dirty ? '' : 'invisible'}`}>
+          Guardar
+        </button>
+      }
+      footer={
+        onDelete && (
           <button
-            type="submit"
-            disabled={!dirty || saving}
-            className={`btn-primary ${dirty ? '' : 'invisible'}`}
+            type="button"
+            onClick={onDelete}
+            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-red-500 transition hover:text-red-700"
           >
-            Guardar
+            <TrashIcon /> Eliminar recurrente
           </button>
-        </div>
-
-        <label className="mb-3 block text-sm">
+        )
+      }
+    >
+      <div className="space-y-5">
+        <label className="block text-sm">
           Concepto
           <input
+            autoFocus
             required
-            className="mt-1 input"
+            className="mt-1.5 input"
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
           />
         </label>
 
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block text-sm">
+            Origen
+            <select className="mt-1.5 input" value={origin} onChange={(e) => setOrigin(e.target.value)}>
+              {origins.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            Destino
+            <select className="mt-1.5 input" value={destination} onChange={(e) => setDestination(e.target.value)}>
+              {destinations.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <label className="block text-sm">
             Importe
             <input
               required
               type="number"
               step="0.01"
-              className="mt-1 input"
+              className="mt-1.5 input"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
@@ -117,17 +139,17 @@ export default function RecurringModal({ categories, initial, defaultOrigin, onC
             <input
               required
               type="date"
-              className="mt-1 input"
+              className="mt-1.5 input"
               value={nextDueDate}
               onChange={(e) => setNextDueDate(e.target.value)}
             />
           </label>
         </div>
 
-        <label className="mb-3 block text-sm">
+        <label className="block text-sm">
           Frecuencia
           <select
-            className="mt-1 input"
+            className="mt-1.5 input"
             value={frequency}
             onChange={(e) => setFrequency(e.target.value as RecurringExpense['frequency'])}
           >
@@ -139,70 +161,27 @@ export default function RecurringModal({ categories, initial, defaultOrigin, onC
           </select>
         </label>
 
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            Origen
-            <select
-              className="mt-1 input"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-            >
-              {origins.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-3 rounded-lg border border-line bg-surface2/50 p-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="accent-fg" checked={active} onChange={(e) => setActive(e.target.checked)} />
+            Activo
           </label>
-          <label className="block text-sm">
-            Destino
-            <select
-              className="mt-1 input"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-            >
-              {destinations.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="accent-fg"
+              checked={autoGenerate}
+              onChange={(e) => setAutoGenerate(e.target.checked)}
+            />
+            Generar movimiento automáticamente en la fecha
           </label>
+          <p className="text-xs text-faint">
+            Desactívalo si no tiene una fecha fija clara (corte de pelo, ITV, taller…): se planifica y
+            analiza a año vista sin crear movimientos.
+          </p>
         </div>
-
-        <label className="mb-2 flex items-center gap-2 text-sm">
-          <input type="checkbox" className="accent-fg" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          Activo
-        </label>
-
-        <label className="mb-1 flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="accent-fg"
-            checked={autoGenerate}
-            onChange={(e) => setAutoGenerate(e.target.checked)}
-          />
-          Generar movimiento automáticamente en la fecha
-        </label>
-        <p className="mb-4 text-xs text-muted">
-          Desactívalo si no tiene una fecha fija clara (corte de pelo, ITV, taller…): se planifica y
-          analiza a año vista sin crear movimientos.
-        </p>
-
-        {onDelete && (
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={onDelete}
-              title="Eliminar"
-              aria-label="Eliminar"
-              className="inline-flex text-red-500 hover:text-red-700"
-            >
-              <TrashIcon />
-            </button>
-          </div>
-        )}
-      </form>
-    </div>
+      </div>
+    </Modal>
   )
 }

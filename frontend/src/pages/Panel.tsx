@@ -101,7 +101,8 @@ export default function Panel() {
   useEffect(() => {
     refreshAccounts()
     api.categories.list().then((cats) => {
-      setExpenseCategories(cats.filter((c) => c.type === 'expense'))
+      // top-level only — subcategory spend rolls up into its parent's budget (backend does the same)
+      setExpenseCategories(cats.filter((c) => c.type === 'expense' && c.parent_id === null))
       // aggregates count only accounts tagged "En total" (include_in_total), matching total_assets
       setAccountCategories(cats.filter((c) => isAccount(c.type) && c.include_in_total))
     })

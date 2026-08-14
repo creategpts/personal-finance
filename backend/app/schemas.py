@@ -18,6 +18,9 @@ class CategoryBase(BaseModel):
     es_ingreso: bool = True
     es_gasto: bool = True
     es_pasivo: bool = False
+    parent_id: int | None = None  # expense categories only: the top-level category this nests under
+    icon: str = "Tag"  # lucide-react icon name, display only; a subcategory's icon is never shown, the parent's is used instead
+    color: str = "#6b7280"
 
 
 class CategoryCreate(CategoryBase):

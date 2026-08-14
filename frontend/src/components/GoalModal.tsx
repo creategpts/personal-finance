@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Category, Goal, GoalCreateInput, GoalTargetInput, GoalType } from '../api'
 import { TrashIcon } from './Icons'
+import Modal from './Modal'
 
 interface Props {
   accounts: Category[] // saving/investment accounts only
@@ -29,7 +30,7 @@ const thisMonth = () => new Date().toISOString().slice(0, 7) // "YYYY-MM"
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-medium text-muted">{label}</span>
+      <span className="mb-1.5 block font-medium text-muted">{label}</span>
       {children}
     </label>
   )
@@ -71,16 +72,6 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
   const [changeMonth, setChangeMonth] = useState(thisMonth())
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
   const paramFields = { amount, percent, targetAmount, targetMonth }
 
   function targetInputs() {
@@ -101,7 +92,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
         </Field>
       )
     return (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <Field label="Meta total">
           <Adorned suffix="€">
             <input required type="number" step="0.01" min="0" className="input pr-8" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} />
@@ -140,103 +131,98 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="text-lg font-semibold tracking-tight">{editing ? 'Editar objetivo' : 'Nuevo objetivo'}</h2>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-xl leading-none text-faint hover:text-fg">
-            ×
+    <Modal
+      title={editing ? 'Editar objetivo' : 'Nuevo objetivo'}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      headerAction={
+        <button type="submit" disabled={busy} className="btn-primary">
+          {editing ? 'Guardar' : 'Crear objetivo'}
+        </button>
+      }
+      footer={
+        onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-red-500 transition hover:text-red-700"
+          >
+            <TrashIcon /> Eliminar objetivo
           </button>
-        </div>
+        )
+      }
+    >
+      <div className="space-y-5">
+        <Field label="Nombre">
+          <input required autoFocus className="input" placeholder="Entrada piso, Fondo emergencia…" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <Field label="Nombre">
-            <input required autoFocus className="input" placeholder="Entrada piso, Fondo emergencia…" value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-
-          {editing ? (
-            <div className="rounded-lg border border-line bg-surface2/50 px-3 py-2 text-sm text-muted">
-              <span className="font-medium text-fg">{account}</span> · {TYPE_LABELS[type]} · desde {startMonth}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Cuenta">
-                  <select className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
-                    {accounts.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Desde">
-                  <input required type="month" className="input" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} />
-                </Field>
-              </div>
-
-              <div>
-                <span className="mb-1 block text-sm font-medium text-muted">Tipo de objetivo</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {(Object.keys(TYPE_LABELS) as GoalType[]).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setType(t)}
-                      className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                        type === t ? 'border-fg bg-surface2 text-fg' : 'border-line text-muted hover:text-fg'
-                      }`}
-                    >
-                      {TYPE_LABELS[t]}
-                    </button>
+        {editing ? (
+          <div className="rounded-lg border border-line bg-surface2/50 px-3 py-2.5 text-sm text-muted">
+            <span className="font-medium text-fg">{account}</span> · {TYPE_LABELS[type]} · desde {startMonth}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Cuenta">
+                <select className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
+                  {accounts.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
                   ))}
-                </div>
-                <p className="mt-1 text-xs text-faint">{TYPE_HINTS[type]}</p>
-              </div>
-
-              {targetInputs()}
-            </>
-          )}
-
-          <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm">
-            <span className="font-medium text-fg">Activo</span>
-            <input type="checkbox" className="h-4 w-4 accent-fg" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          </label>
-
-          {editing && (
-            <div className="rounded-lg border border-line bg-surface2/50 p-3">
-              <p className="text-sm font-medium text-fg">Cambiar objetivo</p>
-              <p className="mb-3 text-xs text-muted">No reescribe el pasado: los meses anteriores mantienen el objetivo vigente entonces.</p>
-              {targetInputs()}
-              <div className="mt-3 grid grid-cols-2 items-end gap-3">
-                <Field label="A partir de">
-                  <input type="month" className="input" value={changeMonth} onChange={(e) => setChangeMonth(e.target.value)} />
-                </Field>
-                <button type="button" disabled={busy} onClick={handleAddTarget} className="btn">
-                  Aplicar cambio
-                </button>
-              </div>
+                </select>
+              </Field>
+              <Field label="Desde">
+                <input required type="month" className="input" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} />
+              </Field>
             </div>
-          )}
-        </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-4">
-          {onDelete ? (
-            <button type="button" onClick={onDelete} title="Eliminar objetivo" aria-label="Eliminar objetivo" className="inline-flex text-red-500 hover:text-red-700">
-              <TrashIcon />
-            </button>
-          ) : (
-            <span />
-          )}
-          <button type="submit" disabled={busy} className="btn-primary">
-            {editing ? 'Guardar' : 'Crear objetivo'}
-          </button>
-        </div>
-      </form>
-    </div>
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-muted">Tipo de objetivo</span>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(TYPE_LABELS) as GoalType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
+                      type === t ? 'border-fg bg-surface2 text-fg' : 'border-line text-muted hover:text-fg'
+                    }`}
+                  >
+                    {TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-faint">{TYPE_HINTS[type]}</p>
+            </div>
+
+            {targetInputs()}
+          </>
+        )}
+
+        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm">
+          <span className="font-medium text-fg">Activo</span>
+          <input type="checkbox" className="h-4 w-4 accent-fg" checked={active} onChange={(e) => setActive(e.target.checked)} />
+        </label>
+
+        {editing && (
+          <div className="rounded-lg border border-line bg-surface2/50 p-4">
+            <p className="text-sm font-medium text-fg">Cambiar objetivo</p>
+            <p className="mb-3 text-xs text-muted">No reescribe el pasado: los meses anteriores mantienen el objetivo vigente entonces.</p>
+            {targetInputs()}
+            <div className="mt-3 grid grid-cols-2 items-end gap-4">
+              <Field label="A partir de">
+                <input type="month" className="input" value={changeMonth} onChange={(e) => setChangeMonth(e.target.value)} />
+              </Field>
+              <button type="button" disabled={busy} onClick={handleAddTarget} className="btn">
+                Aplicar cambio
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }

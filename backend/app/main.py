@@ -36,6 +36,12 @@ with engine.begin() as conn:
         conn.execute(text("ALTER TABLE categories ADD COLUMN es_pasivo BOOLEAN NOT NULL DEFAULT 0"))
         # preserve prior behavior: passive income used to be hardcoded to "Intereses"
         conn.execute(text("UPDATE categories SET es_pasivo = 1 WHERE name = 'Intereses'"))
+    if "icon" not in cat_cols:
+        conn.execute(text("ALTER TABLE categories ADD COLUMN icon TEXT NOT NULL DEFAULT 'Tag'"))
+    if "color" not in cat_cols:
+        conn.execute(text("ALTER TABLE categories ADD COLUMN color TEXT NOT NULL DEFAULT '#6b7280'"))
+    if "parent_id" not in cat_cols:
+        conn.execute(text("ALTER TABLE categories ADD COLUMN parent_id INTEGER"))
     # one-time rename: the old AccountType.key values ('saving'/'investment') are
     # replaced by the account type itself ('ahorro'/'inversion'); 'gasto' is unchanged.
     # No-op on repeat runs once no row has the old value left.

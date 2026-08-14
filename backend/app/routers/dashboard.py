@@ -169,9 +169,18 @@ def monthly_series(months: int = 12, db: Session = Depends(get_db)):
     return points
 
 
+def _rollup_names(db: Session) -> dict[str, str]:
+    """Category name -> its top-level name (itself if it has no parent). Subcategory
+    spend/budget rolls up into the parent category everywhere this app reports by category."""
+    rows = db.query(models.Category.id, models.Category.name, models.Category.parent_id).all()
+    name_by_id = {r.id: r.name for r in rows}
+    return {r.name: name_by_id.get(r.parent_id, r.name) for r in rows}
+
+
 @router.get("/budget-vs-actual", response_model=list[schemas.BudgetVsActualItem])
 def budget_vs_actual(from_date: date, to_date: date, db: Session = Depends(get_db)):
     expense_names = _category_names(db, models.CategoryType.expense)
+    rollup = _rollup_names(db)
 
     done = (
         db.query(models.Movement)
@@ -186,10 +195,12 @@ def budget_vs_actual(from_date: date, to_date: date, db: Session = Depends(get_d
 
     by_category: dict[str, dict[str, float]] = {}
     for m in done:
-        by_category.setdefault(m.destination, {"planned": 0.0, "actual": 0.0})["actual"] += m.amount
+        category = rollup.get(m.destination, m.destination)
+        by_category.setdefault(category, {"planned": 0.0, "actual": 0.0})["actual"] += m.amount
 
     for r in _budget_rows_in_range(db, from_date, to_date):
-        by_category.setdefault(r.category, {"planned": 0.0, "actual": 0.0})["planned"] += r.amount
+        category = rollup.get(r.category, r.category)
+        by_category.setdefault(category, {"planned": 0.0, "actual": 0.0})["planned"] += r.amount
 
     return sorted(
         (schemas.BudgetVsActualItem(category=category, planned=v["planned"], actual=v["actual"]) for category, v in by_category.items()),

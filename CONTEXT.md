@@ -11,6 +11,10 @@ _Avoid_: Transacción, Apunte
 **Categoría**:
 Un nodo con nombre que puede actuar como Origen o Destino de un Movimiento. Es de tipo Ingreso, Gasto, o Cuenta.
 
+**Subcategoría**:
+Una Categoría de Gasto que anida bajo otra Categoría de Gasto (su Categoría principal). Exactamente 2 niveles — una Subcategoría no puede tener a su vez Subcategorías. Solo el tipo Gasto admite esto (Ingreso y Cuenta se quedan planos). Al registrar un Movimiento, elegir la Categoría principal primero habilita un segundo desplegable con sus Subcategorías; es opcional — sin elegir ninguna, el Movimiento queda contra la Categoría principal directamente. En el gráfico «Gasto por categoría» y en Presupuestos, el gasto de una Subcategoría se agrega siempre bajo su Categoría principal — una Subcategoría nunca tiene su propia fila ni su propio Presupuesto independiente.
+_Avoid_: Categoría principal como sinónimo de Categoría (una Categoría principal es específicamente una de Gasto sin padre — toda Categoría de Ingreso o Cuenta es "principal" por defecto, pero ese término solo tiene sentido útil dentro del árbol de Gasto)
+
 **Cuenta**:
 Una Categoría de tipo distinto de Ingreso/Gasto: representa dinero en algún sitio (banco, broker, efectivo). Tiene un Tipo de cuenta.
 
@@ -43,13 +47,13 @@ El campo `concept` de un Movimiento es una etiqueta de texto libre puesta por el
 
 ## Otras entidades
 
-**Presupuesto** (`Budget`): importe objetivo para una Categoría de Gasto en un mes/año concreto. Se compara contra el Gasto real de esa categoría en ese mes.
+**Presupuesto** (`Budget`): importe objetivo para una Categoría de Gasto en un mes/año concreto. Se compara contra el Gasto real de esa categoría en ese mes. Solo se fija sobre Categorías principales — si tiene Subcategorías, el gasto real las agrega todas.
 
 **Gasto recurrente** (`RecurringExpense`): plantilla de Movimiento (concepto, importe, origen, destino) con una frecuencia (mensual/trimestral/anual) y una próxima fecha de vencimiento. Si `auto_generate` está activo, genera Movimientos automáticamente al llegar la fecha; si no, solo se usa para el análisis anual (gastos sin fecha fija: peluquería, ITV...).
 
 **Meta** (`Goal` + `GoalTarget`): objetivo de aportación neta a una Cuenta, evaluado mes a mes de forma acumulada (un mes flojo se compensa con uno fuerte). Tipos (`goals_logic.GOAL_TYPES`): `fixed` (importe fijo/mes), `percent_income` (% del ingreso del mes), `target_date` (saldo total objetivo a una fecha). El objetivo vigente en cada mes se busca por fecha de efecto (`GoalTarget.eff_year/eff_month`), así que cambiar la meta nunca reescribe el pasado.
 
-**Settings**: pares clave-valor globales (app de un solo usuario, sin tabla de usuarios). Claves actuales: `app_name`, `user_name`, `favicon`, `kpi_net_flow`.
+**Settings**: pares clave-valor globales (app de un solo usuario, sin tabla de usuarios). Claves actuales: `app_name`, `user_name`, `favicon`.
 
 **Backup**: volcado JSON completo de todas las tablas, fuera del repo (por defecto, carpeta hermana del proyecto — `LIFETRACK_BACKUP_DIR` para cambiarla). Se dispara solo (si el más reciente tiene >7 días) al arrancar el backend o al listar backups; también hay backup/restore manual vía API y un modo CLI (`python -m app.routers.backup`).
 

@@ -15,6 +15,9 @@ export interface Category {
   es_ingreso: boolean // income categories: counts toward income KPI
   es_gasto: boolean // expense categories: counts toward expense KPI
   es_pasivo: boolean // income categories: passive (interest/dividends) vs active (salary)
+  parent_id: number | null // expense categories only: top-level category this nests under
+  icon: string // display only; a subcategory's own icon is never shown, its parent's is used instead
+  color: string // hex
 }
 
 // create/update payload: only name+type required; the rest default server-side

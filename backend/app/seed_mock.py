@@ -49,9 +49,30 @@ def wipe(db):
     db.commit()
 
 
+SUBCATEGORIES = {
+    # parent name -> [subcategory names], styled with the parent's icon/color (see models.Category.icon)
+    "Alimentación": ["Supermercado", "Cafés / Bares"],
+    "Ocio": ["Planes sociales", "Cultura"],
+}
+
+
 def seed_categories(db):
-    for name, type_ in DEFAULT_CATEGORIES:
-        db.add(models.Category(name=name, type=type_, es_pasivo=name in PASSIVE_INCOME))
+    for name, type_, icon, color in DEFAULT_CATEGORIES:
+        db.add(models.Category(name=name, type=type_, icon=icon, color=color, es_pasivo=name in PASSIVE_INCOME))
+    db.commit()
+
+    for parent_name, children in SUBCATEGORIES.items():
+        parent = db.query(models.Category).filter(models.Category.name == parent_name).one()
+        for child_name in children:
+            db.add(
+                models.Category(
+                    name=child_name,
+                    type="expense",
+                    icon=parent.icon,
+                    color=parent.color,
+                    parent_id=parent.id,
+                )
+            )
     db.commit()
 
 
