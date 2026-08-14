@@ -27,10 +27,10 @@ La clasificación de un Movimiento — Ingreso, Gasto, Ahorro, Inversión, o Tra
 _Avoid_: Tipo de movimiento, Categoría del movimiento
 
 **Ingreso**:
-Concepto de un Movimiento cuyo Origen es una Categoría de Ingreso y cuyo Destino es cualquier Cuenta. Un Movimiento de Ingreso nunca puede tener como Destino una Categoría de Gasto — el dinero siempre pasa por una Cuenta real en algún punto.
+Concepto de un Movimiento cuyo Origen es una Categoría de Ingreso y cuyo Destino es cualquier Cuenta. Un Movimiento de Ingreso nunca puede tener como Destino una Categoría de Gasto — el dinero siempre pasa por una Cuenta real en algún punto (si no pasa por ninguna Cuenta, ver Gasto: es Gasto pero no Ingreso).
 
 **Gasto**:
-Concepto de un Movimiento cuyo Destino es una Categoría de Gasto, sea el Origen la Cuenta que sea (Disponible para gasto, Ahorro o Inversión). Pagar un Gasto directamente desde el Ahorro o la Inversión es Gasto Y además Retirada de esa Cuenta — reduce su total.
+Concepto de un Movimiento cuyo Destino es una Categoría de Gasto, con el Origen siendo o bien una Cuenta (Disponible para gasto, Ahorro o Inversión), o bien una Categoría de Ingreso directamente. Pagar un Gasto directamente desde el Ahorro o la Inversión es Gasto Y además Retirada de esa Cuenta — reduce su total. Pagar un Gasto directamente desde una Categoría de Ingreso (p. ej. Pluxee: un beneficio de empresa de uso restringido que nunca llega a una Cuenta tuya) es Gasto real pero no toca ninguna Cuenta — no reduce el patrimonio porque ese dinero nunca formó parte de él, y tampoco cuenta como Ingreso (el Ingreso exige Destino=Cuenta).
 
 **Aportación**:
 El Concepto Ahorro o Inversión, en positivo, cuando el dinero entra en una Cuenta de ese Tipo. Se suma siempre, sea cual sea el Origen.

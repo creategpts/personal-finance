@@ -16,15 +16,6 @@ def _derived_fields(d):
     return {"year": d.year, "month": d.month, "week": week}
 
 
-def _validate_flow(payload: schemas.MovementCreate, db: Session):
-    """An income category and an expense category never touch the same movement —
-    money always passes through a real account on at least one end."""
-    origin = db.query(models.Category.type).filter(models.Category.name == payload.origin).scalar()
-    destination = db.query(models.Category.type).filter(models.Category.name == payload.destination).scalar()
-    if origin == "income" and destination == "expense":
-        raise HTTPException(status_code=422, detail="Un ingreso no puede ir directo a un gasto")
-
-
 @router.get("", response_model=list[schemas.MovementOut])
 def list_movements(
     year: Optional[int] = None,
@@ -62,7 +53,6 @@ def list_movements(
 
 @router.post("", response_model=schemas.MovementOut)
 def create_movement(payload: schemas.MovementCreate, db: Session = Depends(get_db)):
-    _validate_flow(payload, db)
     movement = models.Movement(**payload.model_dump(), **_derived_fields(payload.date))
     db.add(movement)
     db.commit()
@@ -75,7 +65,6 @@ def update_movement(movement_id: int, payload: schemas.MovementCreate, db: Sessi
     movement = db.get(models.Movement, movement_id)
     if not movement:
         raise HTTPException(status_code=404, detail="Movement not found")
-    _validate_flow(payload, db)
     for key, value in payload.model_dump().items():
         setattr(movement, key, value)
     for key, value in _derived_fields(payload.date).items():

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ACCOUNT_TYPES, type Category, type Movement, type MovementInput } from '../api'
 import { isOrigin, isDestination } from '../categoryTypes'
 import Money from './Money'
@@ -40,22 +40,17 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
   const [destination, setDestination] = useState(initial?.destination ?? allDestinations[0]?.name ?? '')
   const [saving, setSaving] = useState(false)
 
-  // un ingreso no puede ir directo a un gasto — cada lado excluye el otro flujo
-  const originType = categories.find((c) => c.name === origin)?.type
-  const destinationType = categories.find((c) => c.name === destination)?.type
+  // un Ingreso puede ir directo a un Gasto (p. ej. Pluxee: dinero que nunca pasa por
+  // una cuenta tuya, así que no toca patrimonio, pero sí es gasto real) — ver kpi_logic.matches_kpi
 
   // ---- Origen: categorías de Ingreso planas + grupo "Cuenta" con todas las cuentas ----
   const originAccounts = allOrigins.filter(isAccountCategory)
-  const originCategories = allOrigins.filter(
-    (c) => !isAccountCategory(c) && !(destinationType === 'expense' && c.type === 'income'),
-  )
+  const originCategories = allOrigins.filter((c) => !isAccountCategory(c))
 
   // ---- Destino: cada categoría de Gasto de nivel superior es su propio grupo (con sus
   // subcategorías dentro, si tiene); las cuentas van en su propio grupo "Cuenta" ----
   const destinationAccounts = allDestinations.filter(isAccountCategory)
-  const destinationTopCategories = allDestinations.filter(
-    (c) => !isAccountCategory(c) && !(originType === 'income' && c.type === 'expense') && c.parent_id === null,
-  )
+  const destinationTopCategories = allDestinations.filter((c) => !isAccountCategory(c) && c.parent_id === null)
   const subcategoriesOf = (parentId: number) => categories.filter((c) => c.parent_id === parentId)
 
   const originItems: PickerItem[] = [
@@ -80,14 +75,6 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
       ? [{ kind: 'group' as const, label: 'Cuenta', flat: true, children: destinationAccounts.map((c) => ({ value: c.name, label: c.name })) }]
       : []),
   ]
-
-  // the dropdowns below already hide the invalid combo from selection; this only
-  // self-heals the initial default state if origin/destination land on income/expense
-  useEffect(() => {
-    if (originType === 'income' && destinationType === 'expense') {
-      setDestination(allDestinations.find((c) => c.type !== 'expense')?.name ?? '')
-    }
-  }, [originType, destinationType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const computedAmount = evalAmount(amount)
   const showAggregate = /[+-]/.test(amount.trim()) && computedAmount !== null

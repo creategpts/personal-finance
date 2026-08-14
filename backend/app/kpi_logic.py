@@ -24,10 +24,25 @@ def category_name_sets(db: Session) -> dict[str, set[str]]:
             c.name for c in cats if c.type == "income" and c.es_ingreso and c.es_pasivo
         },
         "expense": {c.name for c in cats if c.type == "expense" and c.es_gasto},
+        # unfiltered — used to recognize a flagged-off category (Revalorización,
+        # Devaluación...) as a valuation adjustment rather than "not a category at all"
+        "income_all": {c.name for c in cats if c.type == "income"},
+        "expense_all": {c.name for c in cats if c.type == "expense"},
         "saving": acct("ahorro"),
         "investment": acct("inversion"),
         "gasto": acct("gasto"),
     }
+
+
+def _is_valuation_adjustment(name: str, names: dict[str, set[str]]) -> bool:
+    """A flow category that exists but has its es_ingreso/es_gasto flag off — e.g.
+    Revalorización/Devaluación. Not a real cash flow, just marks a balance change,
+    so it shouldn't count as an aportación/retirada either."""
+    if name in names["income_all"]:
+        return name not in names["income"]
+    if name in names["expense_all"]:
+        return name not in names["expense"]
+    return False
 
 
 def matches_kpi(movement: models.Movement, kpi: str, names: dict[str, set[str]]) -> bool:
@@ -39,12 +54,26 @@ def matches_kpi(movement: models.Movement, kpi: str, names: dict[str, set[str]])
         # income = money entering an account from an income category flagged es_ingreso
         return origin in names["income"] and destination in account_names
     if kpi == "expense":
-        return origin in account_names and destination in names["expense"]
+        # normally paid from a real account, but also valid straight from an Ingreso
+        # category (e.g. Pluxee: restaurant credit deducted from gross pay — it never
+        # sits in a tracked account, so it shouldn't touch patrimonio, but it's still
+        # real spending). Origin can only ever be an account or an income category
+        # (categoryTypes.isOrigin) — expense/other combos can't occur.
+        return (origin in account_names or origin in names["income"]) and destination in names["expense"]
     if kpi in ("saving", "investment"):
+        origin_is_acct = origin in names[kpi]
+        destination_is_acct = destination in names[kpi]
         # double-entry: touching the behavior on either end matches, regardless of the
         # other end — a transfer within the same behavior still "matches" even though
         # its net kpi_amount is zero.
-        return origin in names[kpi] or destination in names[kpi]
+        if not origin_is_acct and not destination_is_acct:
+            return False
+        if origin_is_acct and destination_is_acct:
+            return True
+        # exactly one side is the account — a valuation adjustment on the other side
+        # (Revalorización/Devaluación) changes the balance but isn't a real aportación/retirada
+        other = destination if origin_is_acct else origin
+        return not _is_valuation_adjustment(other, names)
     return False
 
 

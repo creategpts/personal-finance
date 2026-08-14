@@ -7,7 +7,7 @@ cumulative: real acumulado >= objetivo acumulado -> "voy al día". A weak month 
 offset by a strong one. The open (current) month never fails.
 """
 
-from .kpi_logic import kpi_amount, matches_kpi
+from .kpi_logic import _is_valuation_adjustment, kpi_amount, matches_kpi
 
 GOAL_TYPES = ("fixed", "percent_income", "target_date")
 
@@ -27,15 +27,24 @@ def _total_months(start_y, start_m, end_y, end_m):
     return (end_y - start_y) * 12 + (end_m - start_m) + 1
 
 
-def account_net_flow(movements, account, year, month):
-    """Net contribution to `account` in (year, month): money in minus money out."""
-    return sum(
-        (mv.amount if mv.destination == account else -mv.amount)
-        for mv in movements
-        if mv.year == year
-        and mv.month == month
-        and (mv.origin == account or mv.destination == account)
-    )
+def account_net_flow(movements, account, year, month, names):
+    """Net contribution to `account` in (year, month): money in minus money out.
+
+    Excludes valuation adjustments (Revalorización/Devaluación) on the other side —
+    same rule as kpi_logic.matches_kpi: a balance change with no real cash flow
+    shouldn't count as goal progress either.
+    """
+    total = 0.0
+    for mv in movements:
+        if mv.year != year or mv.month != month:
+            continue
+        if mv.origin != account and mv.destination != account:
+            continue
+        other = mv.destination if mv.origin == account else mv.origin
+        if _is_valuation_adjustment(other, names):
+            continue
+        total += mv.amount if mv.destination == account else -mv.amount
+    return total
 
 
 def income_for_month(movements, names, year, month):
@@ -93,7 +102,7 @@ def goal_progress(goal, done_movements, names, today, start_balance=0.0):
     for (y, m) in _months_from(goal.start_year, goal.start_month, end_y, end_m):
         t = resolve_target(targets, y, m)
         tm = target_month_value(goal, t, y, m, done_movements, names, seed)
-        am = account_net_flow(done_movements, goal.account, y, m)
+        am = account_net_flow(done_movements, goal.account, y, m, names)
         cum_t += tm
         cum_a += am
         is_current = (y, m) == (today.year, today.month)

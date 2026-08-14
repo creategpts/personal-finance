@@ -11,11 +11,6 @@ from ..recurring_logic import generate_due_recurring
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
-def _category_names(db: Session, category_type: models.CategoryType) -> set[str]:
-    rows = db.query(models.Category.name).filter(models.Category.type == category_type).all()
-    return {r[0] for r in rows}
-
-
 def _month_end(year: int, month: int) -> date:
     first_next = date(year + (month == 12), 1 if month == 12 else month + 1, 1)
     return first_next - timedelta(days=1)
@@ -179,7 +174,10 @@ def _rollup_names(db: Session) -> dict[str, str]:
 
 @router.get("/budget-vs-actual", response_model=list[schemas.BudgetVsActualItem])
 def budget_vs_actual(from_date: date, to_date: date, db: Session = Depends(get_db)):
-    expense_names = _category_names(db, models.CategoryType.expense)
+    # same "is this really a gasto" rule as everywhere else (kpi_logic.matches_kpi):
+    # destination flagged off (es_gasto=False, e.g. Devaluación) or origin not a real
+    # account both disqualify a movement, instead of only checking the destination.
+    names = category_name_sets(db)
     rollup = _rollup_names(db)
 
     done = (
@@ -188,13 +186,14 @@ def budget_vs_actual(from_date: date, to_date: date, db: Session = Depends(get_d
             models.Movement.date >= from_date,
             models.Movement.date <= to_date,
             models.Movement.status == models.MovementStatus.done,
-            models.Movement.destination.in_(expense_names),
         )
         .all()
     )
 
     by_category: dict[str, dict[str, float]] = {}
     for m in done:
+        if not matches_kpi(m, "expense", names):
+            continue
         category = rollup.get(m.destination, m.destination)
         by_category.setdefault(category, {"planned": 0.0, "actual": 0.0})["actual"] += m.amount
 

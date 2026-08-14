@@ -103,8 +103,10 @@ export default function Panel() {
     api.categories.list().then((cats) => {
       // top-level only — subcategory spend rolls up into its parent's budget (backend does the same)
       setExpenseCategories(cats.filter((c) => c.type === 'expense' && c.parent_id === null))
-      // aggregates count only accounts tagged "En total" (include_in_total), matching total_assets
-      setAccountCategories(cats.filter((c) => isAccount(c.type) && c.include_in_total))
+      // every account of that type, regardless of "En patrimonio total" — these tiles
+      // show what you actually have by type; that flag only curates the headline
+      // "Valor total de activos" above, so the two can legitimately disagree.
+      setAccountCategories(cats.filter((c) => isAccount(c.type)))
     })
   }, [])
 
