@@ -267,7 +267,7 @@ export default function Panel() {
               <YAxis yAxisId="fg" type="category" dataKey="category" hide width={0} />
               <Tooltip
                 cursor={false}
-                formatter={(v: number) => v.toFixed(2)}
+                formatter={(v) => Number(v).toFixed(2)}
                 contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
                 labelStyle={{ color: 'var(--fg)' }}
                 itemStyle={{ color: 'var(--fg)' }}
@@ -287,7 +287,7 @@ export default function Panel() {
                 radius={[0, 4, 4, 0]}
                 maxBarSize={12}
                 cursor="pointer"
-                onClick={(data: BudgetVsActualItem) => goToCategory('destination', data.category)}
+                onClick={(data) => goToCategory('destination', (data as unknown as BudgetVsActualItem).category)}
               >
                 {items.map((entry) => (
                   <Cell

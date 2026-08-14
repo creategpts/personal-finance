@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from . import models
@@ -77,3 +81,14 @@ app.include_router(goals.router)
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# Built frontend (npm run build), served by the desktop app so it's one process/port
+# with no CORS needed. Dev keeps using Vite on :5173 — this is a no-op until dist exists.
+DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if DIST_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        return FileResponse(DIST_DIR / "index.html")

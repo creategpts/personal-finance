@@ -39,6 +39,10 @@ Cierra y vuelve a abrir la terminal después de instalar para que reconozca los 
 - macOS: cierra la ventana de Terminal o pulsa Ctrl+C para parar ambos.
 - Windows: abre dos ventanas (Backend/Frontend) — ciérralas para parar cada una.
 
+**App de escritorio (macOS)**: doble click en [`desktop.command`](./desktop.command) — arranca la app en una ventana propia, sin barra de navegador (backend y frontend en un solo proceso, vía [pywebview](https://pywebview.flowrl.com/)). La primera vez instala dependencias, construye el frontend y genera `Life Track.app` en la raíz del repo; a partir de ahí puedes abrir directamente ese `.app` (doble click, o arrástralo al Dock).
+
+`Life Track.app` no se commitea (está en `.gitignore`) — cada máquina genera el suyo al ejecutar `desktop.command`, así que no lleva rutas de nadie más ni carga la cuarentena de Gatekeeper de un `.app` movido/descargado. macOS pedirá permiso de acceso a la carpeta Documentos la primera vez que lo abras (si el repo vive ahí) — acéptalo, si no lo haces `desktop.command` sigue funcionando igual, solo que el `.app` no arranca.
+
 O manualmente:
 
 **Backend** (terminal 1):
