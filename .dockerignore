@@ -1,0 +1,13 @@
+# Build context hygiene: never ship host artifacts into the image.
+backend/venv
+backend/__pycache__
+**/__pycache__
+*.pyc
+frontend/node_modules
+frontend/dist
+*.db
+*.db-journal
+data
+.git
+.claude
+Life Track.app

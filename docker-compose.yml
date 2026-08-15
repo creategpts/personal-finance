@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    # DB + backups live in ./data on the host so they survive `docker compose
+    # down` and image rebuilds, and stay visible/copyable outside the container.
+    volumes:
+      - ./data:/data
+    environment:
+      - LIFETRACK_DB_URL=sqlite:////data/life_track.db
+      - LIFETRACK_BACKUP_DIR=/data/backup
+    restart: unless-stopped

@@ -25,3 +25,6 @@ frontend/dist
 # Env
 .env
 .env.*
+
+# Docker volume: local DB + backups
+/data/

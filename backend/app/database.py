@@ -1,7 +1,11 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./life_track.db"
+# Default is the local file next to the backend (host dev). Docker overrides it to
+# a mounted volume path via LIFETRACK_DB_URL so the DB survives container rebuilds.
+SQLALCHEMY_DATABASE_URL = os.environ.get("LIFETRACK_DB_URL", "sqlite:///./life_track.db")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

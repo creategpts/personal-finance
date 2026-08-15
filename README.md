@@ -9,7 +9,21 @@ Ver [CONTEXT.md](./CONTEXT.md) para el glosario de dominio (Movimiento, Cuenta, 
 - **Backend**: FastAPI + SQLAlchemy + SQLite (`backend/`)
 - **Frontend**: React + TypeScript + Vite + Tailwind (`frontend/`)
 
-## Requisitos previos
+## Arrancar con Docker (recomendado)
+
+La forma más simple: solo necesitas [Docker](https://www.docker.com/products/docker-desktop/) instalado — ni Python ni Node ni versiones que cuadrar. Desde la raíz del repo:
+
+```bash
+docker compose up --build
+```
+
+Abre `http://localhost:8000` en el navegador (backend y frontend van juntos en un solo contenedor y puerto — sin `:5173` aparte). La primera vez construye la imagen; después, `docker compose up` sin `--build` arranca al momento. Para parar: Ctrl+C, o `docker compose down` desde otra terminal.
+
+La base de datos (`life_track.db`) y los backups viven en `./data/` en tu máquina (montado como volumen), así que **sobreviven a reconstruir la imagen o borrar el contenedor**. Esa carpeta está en `.gitignore` — no se commitea. Para empezar de cero, borra `./data/`.
+
+El resto de esta guía (arranque manual con Python/Node) sigue siendo válido si prefieres no usar Docker.
+
+## Requisitos previos (sin Docker)
 
 Necesitas **Python 3.11+** y **Node.js 20+**. Sin base de datos externa ni variables de entorno obligatorias.
 
