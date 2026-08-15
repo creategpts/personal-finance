@@ -77,6 +77,16 @@ def create_backup(db: Session = Depends(get_db)):
     return {"file": fname, "counts": counts}
 
 
+@router.delete("")
+def delete_backup(file: str):
+    fname = Path(file).name  # basename only -> no path traversal
+    fpath = BACKUP_DIR / fname
+    if not fname or not fpath.exists():
+        raise HTTPException(status_code=404, detail="Backup no encontrado")
+    fpath.unlink()
+    return {"deleted": fname}
+
+
 def run_cli() -> None:
     """Standalone timestamped backup — reads the SQLite file directly, no running server.
     Run from backend/:  ./venv/bin/python -m app.routers.backup"""

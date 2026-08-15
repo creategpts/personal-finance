@@ -274,5 +274,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ file }),
       }),
+    remove: (file: string) =>
+      request<{ deleted: string }>(`/backup?file=${encodeURIComponent(file)}`, { method: 'DELETE' }),
   },
 }

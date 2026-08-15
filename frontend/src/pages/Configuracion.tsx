@@ -464,6 +464,17 @@ function BackupSection() {
     }
   }
 
+  async function remove(file: string) {
+    if (!confirm(`Eliminar «${file}»?\n\nSe borrará el archivo de copia. Acción irreversible.`)) return
+    setBusy(true)
+    try {
+      await api.backup.remove(file)
+      load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-start justify-between gap-4">
@@ -492,9 +503,18 @@ function BackupSection() {
               <tr key={f}>
                 <td className="num font-medium text-fg">{f}</td>
                 <td className="text-right">
-                  <button onClick={() => restore(f)} disabled={busy} className="btn">
-                    Restaurar
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => restore(f)} disabled={busy} className="btn">
+                      Restaurar
+                    </button>
+                    <button
+                      onClick={() => remove(f)}
+                      disabled={busy}
+                      className="btn text-red-500 hover:text-red-700"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
