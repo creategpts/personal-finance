@@ -20,16 +20,29 @@ def goal(gtype, start_year, start_month, account, targets):
     return SimpleNamespace(id=1, type=gtype, start_year=start_year, start_month=start_month, account=account, targets=targets)
 
 
+def names(**over):
+    """A category_name_sets()-shaped dict with every key the goals path touches.
+    Defaults are empty sets — nothing is income/expense/valuation, so account_net_flow
+    counts every flow. Override the sets a test actually needs."""
+    base = {
+        "income": set(), "income_passive": set(), "income_all": set(),
+        "expense": set(), "expense_all": set(),
+        "saving": set(), "investment": set(), "gasto": set(),
+    }
+    base.update(over)
+    return base
+
+
 def test_net_flow():
     movs = [mv(2026, 1, "Nomina", "Fondo", 300), mv(2026, 1, "Fondo", "Cuenta", 100), mv(2026, 2, "Nomina", "Fondo", 50)]
-    assert goals_logic.account_net_flow(movs, "Fondo", 2026, 1) == 200  # 300 in - 100 out
-    assert goals_logic.account_net_flow(movs, "Fondo", 2026, 2) == 50
+    assert goals_logic.account_net_flow(movs, "Fondo", 2026, 1, names()) == 200  # 300 in - 100 out
+    assert goals_logic.account_net_flow(movs, "Fondo", 2026, 2, names()) == 50
 
 
 def test_carryover_and_open_month():
     g = goal("fixed", 2026, 1, "Fondo", [tgt(2026, 1, amount=100)])
     movs = [mv(2026, 1, "N", "Fondo", 50), mv(2026, 2, "N", "Fondo", 200)]
-    rows = goals_logic.goal_progress(g, movs, {}, date(2026, 3, 15))["rows"]
+    rows = goals_logic.goal_progress(g, movs, names(), date(2026, 3, 15))["rows"]
     # jan below (failed), feb catches up cumulatively (met), mar open (never failed)
     assert [r["status"] for r in rows] == ["failed", "met", "open"]
     assert rows[0]["cum_actual"] == 50 and rows[0]["cum_target"] == 100
@@ -38,15 +51,15 @@ def test_carryover_and_open_month():
 
 def test_effect_dated_target():
     g = goal("fixed", 2026, 1, "Fondo", [tgt(2026, 1, amount=100), tgt(2026, 3, amount=200)])
-    rows = goals_logic.goal_progress(g, [], {}, date(2026, 4, 1))["rows"]
+    rows = goals_logic.goal_progress(g, [], names(), date(2026, 4, 1))["rows"]
     assert [r["target_month"] for r in rows] == [100.0, 100.0, 200.0, 200.0]  # past not rewritten
 
 
 def test_percent_income():
-    names = {"income": {"Nomina"}, "saving": {"Fondo"}, "investment": set(), "gasto": {"Efectivo"}}
+    n = names(income={"Nomina"}, saving={"Fondo"}, gasto={"Efectivo"})
     g = goal("percent_income", 2026, 1, "Fondo", [tgt(2026, 1, percent=10)])
     movs = [mv(2026, 1, "Nomina", "Efectivo", 1000), mv(2026, 1, "Efectivo", "Fondo", 150)]
-    r = goals_logic.goal_progress(g, movs, names, date(2026, 1, 20))["rows"][0]
+    r = goals_logic.goal_progress(g, movs, n, date(2026, 1, 20))["rows"][0]
     assert r["target_month"] == 100.0  # 10% of 1000 income
     assert r["actual_month"] == 150.0
     assert r["status"] == "met"
@@ -54,11 +67,11 @@ def test_percent_income():
 
 def test_target_date_pace_and_completion():
     g = goal("target_date", 2026, 1, "Fondo", [tgt(2026, 1, target_amount=1200, target_year=2026, target_month=12)])
-    prog = goals_logic.goal_progress(g, [], {}, date(2026, 6, 1))
+    prog = goals_logic.goal_progress(g, [], names(), date(2026, 6, 1))
     assert prog["rows"][0]["target_month"] == 100.0  # 1200 / 12 months, flat
     assert prog["completed"] is False
     # after the deadline the series caps at the target month and marks complete
-    past = goals_logic.goal_progress(g, [], {}, date(2027, 1, 15))
+    past = goals_logic.goal_progress(g, [], names(), date(2027, 1, 15))
     assert past["completed"] is True
     assert past["rows"][-1]["month"] == 12
 
@@ -66,7 +79,7 @@ def test_target_date_pace_and_completion():
 def test_target_date_counts_existing_balance():
     # meta 60k, already have 37k, 24 months -> monthly need closes the gap, not 60k/24
     g = goal("target_date", 2026, 1, "Fondo", [tgt(2026, 1, target_amount=60000, target_year=2027, target_month=12)])
-    r0 = goals_logic.goal_progress(g, [], {}, date(2026, 3, 1), start_balance=37000)["rows"][0]
+    r0 = goals_logic.goal_progress(g, [], names(), date(2026, 3, 1), start_balance=37000)["rows"][0]
     assert r0["target_month"] == 958.33  # (60000-37000) / 24 months
     assert r0["cum_actual"] == 37000.0  # existing balance seeds progress
     assert round(r0["cum_target"], 2) == 37958.33
@@ -80,7 +93,7 @@ def test_completed_uses_effective_meta_not_stale_target():
         tgt(2026, 1, id=2, target_amount=60000, target_year=2027, target_month=12),
     ]
     g = goal("target_date", 2026, 1, "Fondo", targets)
-    prog = goals_logic.goal_progress(g, [], {}, date(2026, 3, 1), start_balance=37000)
+    prog = goals_logic.goal_progress(g, [], names(), date(2026, 3, 1), start_balance=37000)
     assert prog["completed"] is False  # 37000 < effective meta 60000
 
 
