@@ -11,7 +11,11 @@ Ver [CONTEXT.md](./CONTEXT.md) para el glosario de dominio (Movimiento, Cuenta, 
 
 ## Arrancar con Docker (recomendado)
 
-La forma más simple: solo necesitas [Docker](https://www.docker.com/products/docker-desktop/) instalado — ni Python ni Node ni versiones que cuadrar. Desde la raíz del repo:
+La forma más simple: solo necesitas [Docker](https://www.docker.com/products/docker-desktop/) instalado — ni Python ni Node ni versiones que cuadrar.
+
+**Doble click**: [`start-docker.command`](./start-docker.command) (macOS) o [`start-docker.bat`](./start-docker.bat) (Windows) — abre Docker Desktop si hace falta, construye y arranca el contenedor, y abre el navegador en `http://localhost:8000`. Para pararlo: `docker compose down` en esta carpeta (o desde Docker Desktop).
+
+**O a mano**, desde la raíz del repo (con Docker Desktop ya abierto):
 
 ```bash
 docker compose up --build
