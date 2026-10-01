@@ -11,7 +11,6 @@ import InvestmentLedger from './pages/InvestmentLedger'
 import Configuracion from './pages/Configuracion'
 import UserMenu from './components/UserMenu'
 import { loadSettings, useSettings } from './settings'
-import { authClient } from './lib/auth-client'
 
 const navItems = [
   { to: '/movimientos', label: 'Movimientos', end: false, icon: ArrowLeftRight },
@@ -29,23 +28,13 @@ function AuthPage() {
   )
 }
 
-let shellMountCount = 0
-
 function Shell() {
   const { app_name, favicon } = useSettings()
   useEffect(() => {
     loadSettings()
-    shellMountCount += 1
-    console.log('SHELL MOUNT #', shellMountCount)
-    return () => console.log('SHELL UNMOUNT')
   }, [])
-  const session = authClient.useSession()
-  console.log('RENDER session.isPending=', session.isPending, 'hasData=', !!session.data)
   return (
     <div className="flex h-screen flex-col overflow-hidden text-fg md:flex-row">
-      <div className="fixed bottom-0 left-0 z-50 bg-red-600 p-1 text-xs text-white">
-        mounts: {shellMountCount} / isPending: {String(session.isPending)} / hasData: {String(!!session.data)}
-      </div>
       <header className="flex shrink-0 items-center justify-between border-b border-line bg-surface px-4 py-3 md:hidden">
         <Link to="/" className="flex items-center gap-2 hover:opacity-80">
           <span className="text-lg leading-none">{favicon}</span>

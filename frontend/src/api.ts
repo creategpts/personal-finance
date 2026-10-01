@@ -301,15 +301,22 @@ async function currentToken(): Promise<string | undefined> {
   return token
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = await currentToken()
-  const res = await fetch(`/api${path}`, {
+async function fetchWithToken(path: string, options: RequestInit | undefined, token: string | undefined) {
+  return fetch(`/api${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
   })
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  let res = await fetchWithToken(path, options, await currentToken())
+  if (res.status === 401) {
+    cachedToken = undefined
+    res = await fetchWithToken(path, options, await currentToken())
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     throw new Error(body?.detail || `${options?.method ?? 'GET'} ${path} failed: ${res.status}`)

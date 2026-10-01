@@ -90,8 +90,8 @@ export default function Movimientos() {
     setFDestination(searchParams.get('destination') ?? 'All')
   }, [searchParams])
 
-  async function refresh() {
-    setAccountsKey((k) => k + 1)
+  async function refresh(bumpAccounts = true) {
+    if (bumpAccounts) setAccountsKey((k) => k + 1)
     const [m, c] = await Promise.all([
       api.movements.list({ ...(kpi && { kpi }) }),
       api.categories.list(),
@@ -101,7 +101,7 @@ export default function Movimientos() {
   }
 
   useEffect(() => {
-    refresh()
+    refresh(false)
   }, [kpi])
 
   const origins = categories.filter((c) => isOrigin(c.type))
