@@ -1,0 +1,22 @@
+[project]
+name = "personal-finance"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "sqlalchemy",
+  "pydantic",
+  "psycopg2-binary",
+  "requests",
+  "lxml",
+  "pyjwt",
+  "cryptography",
+]
+
+# ponytail: this list must mirror backend/requirements.txt (used by Docker) by
+# hand — Vercel's zero-config Python builder reads deps from here, not from
+# backend/, and ignores a plain requirements.txt placed anywhere but the repo
+# root.
+[tool.vercel]
+entrypoint = "backend.app.main:app"
