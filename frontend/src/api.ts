@@ -277,9 +277,32 @@ function sessionTokenFromBetaSdkActualShape(data: unknown): string | undefined {
   return (data as { session?: { token?: string } } | null)?.session?.token
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+function jwtExpirySeconds(token: string): number {
+  try {
+    const base64url = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64url.padEnd(base64url.length + ((4 - (base64url.length % 4)) % 4), '=')
+    return JSON.parse(atob(padded)).exp ?? 0
+  } catch {
+    return 0
+  }
+}
+
+let cachedToken: string | undefined
+let cachedTokenExpiry = 0
+
+async function currentToken(): Promise<string | undefined> {
+  if (cachedToken && cachedTokenExpiry - Date.now() / 1000 > 30) return cachedToken
   const { data } = await authClient.token()
   const token = sessionTokenFromBetaSdkActualShape(data)
+  if (token) {
+    cachedToken = token
+    cachedTokenExpiry = jwtExpirySeconds(token)
+  }
+  return token
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = await currentToken()
   const res = await fetch(`/api${path}`, {
     headers: {
       'Content-Type': 'application/json',
