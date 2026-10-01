@@ -1,0 +1,13 @@
+# ponytail: Vercel's Python builder only looks for requirements.txt next to
+# api/index.py or at the repo root, never in backend/ — this has to mirror
+# backend/requirements.txt by hand (Vercel doesn't resolve relative -r includes
+# here). Keep both in sync when either changes.
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+psycopg2-binary
+requests
+lxml
+pyjwt
+cryptography
