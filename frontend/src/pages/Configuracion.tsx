@@ -96,10 +96,40 @@ function SimpleCategoryList({
     </span>
   )
 
+  const countPill = (c: Category) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleCount(c)
+      }}
+      title={`${countHeader}: click para cambiar`}
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+        c[countKey] ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+      }`}
+    >
+      {c[countKey] ? 'Sí' : 'No'}
+    </button>
+  )
+
+  const pasivoPill = (c: Category) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        togglePasivo(c)
+      }}
+      title="Ingreso pasivo (intereses, dividendos, alquiler) vs activo (trabajo)"
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+        c.es_pasivo ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400' : 'bg-surface2 text-muted'
+      }`}
+    >
+      {c.es_pasivo ? 'Pasivo' : 'Activo'}
+    </button>
+  )
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="card min-h-0 flex-1 overflow-auto">
-        <table className="tbl">
+        <table className="tbl hidden md:table">
           <thead className="sticky top-0 z-10">
             <tr>
               <th>
@@ -240,6 +270,53 @@ function SimpleCategoryList({
             )}
           </tbody>
         </table>
+
+        <div className="divide-y divide-linesoft md:hidden">
+          {isExpense
+            ? topLevel.map((c) => {
+                const children = childrenOf(c.id)
+                const open = !collapsed.has(c.id)
+                return (
+                  <Fragment key={`cc-${c.id}`}>
+                    <div onClick={() => setEditing(c)} className="flex cursor-pointer items-center gap-2 px-4 py-3 active:bg-surface2">
+                      {badge(c.icon, c.color)}
+                      <span className="min-w-0 flex-1 truncate font-medium text-fg">{c.name}</span>
+                      {children.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleCollapsed(c.id)
+                          }}
+                          className="shrink-0 text-xs text-faint hover:text-fg"
+                        >
+                          ({children.length}) {open ? '▾' : '▸'}
+                        </button>
+                      )}
+                      {countPill(c)}
+                    </div>
+                    {open &&
+                      children.map((sub) => (
+                        <div key={sub.id} onClick={() => setEditing(sub)} className="flex cursor-pointer items-center gap-2 bg-surface2/40 px-4 py-3 pl-8 active:bg-surface2">
+                          {badge(c.icon, c.color, 'sm')}
+                          <span className="min-w-0 flex-1 truncate text-fg">{sub.name}</span>
+                          {countPill(sub)}
+                        </div>
+                      ))}
+                  </Fragment>
+                )
+              })
+            : items.map((c) => (
+                <div key={`cc-${c.id}`} onClick={() => setEditing(c)} className="flex cursor-pointer items-center gap-2 px-4 py-3 active:bg-surface2">
+                  {badge(c.icon, c.color)}
+                  <span className="min-w-0 flex-1 truncate font-medium text-fg">{c.name}</span>
+                  {isIncome && pasivoPill(c)}
+                  {countPill(c)}
+                </div>
+              ))}
+          {(isExpense ? topLevel.length === 0 : items.length === 0) && (
+            <div className="px-4 py-10 text-center text-faint">Sin categorías</div>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex shrink-0 justify-end">
@@ -315,7 +392,7 @@ function CuentasSection({ categories, onChanged }: { categories: Category[]; onC
   return (
     <div>
       <div className="card overflow-hidden">
-        <table className="tbl">
+        <table className="tbl hidden md:table">
           <thead>
             <tr>
               <th>Cuenta</th>
@@ -392,6 +469,54 @@ function CuentasSection({ categories, onChanged }: { categories: Category[]; onC
             )}
           </tbody>
         </table>
+
+        <div className="divide-y divide-linesoft md:hidden">
+          {items.map((c) => (
+            <div
+              key={c.id}
+              onClick={() => setEditing(c)}
+              className={`flex cursor-pointer items-center gap-2 px-4 py-3 active:bg-surface2 ${c.visible ? '' : 'opacity-50'}`}
+            >
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                style={{ backgroundColor: `${c.color}26`, color: c.color }}
+              >
+                <CategoryIcon name={c.icon} size={13} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-fg">{c.name}</div>
+                <div className="text-xs text-faint">{typeLabel(c.type)}</div>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleIncludeInTotal(c)
+                  }}
+                  title="Incluir/excluir del valor total de activos"
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    c.include_in_total ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                  }`}
+                >
+                  Patrimonio: {c.include_in_total ? 'Sí' : 'No'}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleVisible(c)
+                  }}
+                  title={c.visible ? 'Ocultar en Inicio' : 'Mostrar en Inicio'}
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    c.visible ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                  }`}
+                >
+                  Mostrar: {c.visible ? 'Sí' : 'No'}
+                </button>
+              </div>
+            </div>
+          ))}
+          {items.length === 0 && <div className="px-4 py-10 text-center text-faint">Sin cuentas</div>}
+        </div>
       </div>
 
       <div className="mt-3 flex justify-end">
@@ -477,7 +602,7 @@ function BackupSection() {
 
   return (
     <div>
-      <div className="mb-3 flex items-start justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
         <p className="text-sm text-muted">
           Copia completa de la base de datos: cuentas, categorías, movimientos, presupuestos y
           gastos recurrentes.
@@ -486,12 +611,12 @@ function BackupSection() {
           Crear copia
         </button>
       </div>
-      <p className="mb-3 text-xs text-faint">
+      <p className="mb-3 break-all text-xs text-faint">
         Carpeta: <span className="num">{dir || '…'}</span>
       </p>
 
       <div className="card overflow-hidden">
-        <table className="tbl">
+        <table className="tbl hidden md:table">
           <thead>
             <tr>
               <th>Copia de seguridad</th>
@@ -527,6 +652,23 @@ function BackupSection() {
             )}
           </tbody>
         </table>
+
+        <div className="divide-y divide-linesoft md:hidden">
+          {files.map((f) => (
+            <div key={f} className="px-4 py-3">
+              <div className="num mb-2 break-all text-sm font-medium text-fg">{f}</div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => restore(f)} disabled={busy} className="btn flex-1">
+                  Restaurar
+                </button>
+                <button onClick={() => remove(f)} disabled={busy} className="btn flex-1 text-red-500 hover:text-red-700">
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+          {files.length === 0 && <div className="px-4 py-10 text-center text-faint">Sin copias todavía</div>}
+        </div>
       </div>
     </div>
   )
@@ -668,7 +810,7 @@ export default function Configuracion() {
     <div className="flex h-full flex-col">
       <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Configuración</h1>
 
-      <div className="mb-5 inline-flex shrink-0 gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
+      <div className="mb-5 inline-flex shrink-0 flex-wrap gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
         {([
           ['general', 'General'],
           ['cuentas', 'Cuentas'],
@@ -693,7 +835,7 @@ export default function Configuracion() {
         {tab === 'cuentas' && <CuentasSection categories={categories} onChanged={refresh} />}
 
         {tab === 'categorias' && (
-          <div className="flex h-full min-h-0 gap-4">
+          <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
             <SimpleCategoryList
               title="Ingresos"
               columnLabel="Orígenes"

@@ -42,7 +42,7 @@ export default function InversionDashboard({
 
   return (
     <div>
-      <div className="mb-6 grid grid-cols-4 gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Capital invertido" value={summary?.total_invertido ?? 0} blurred={hideAmounts} />
         <StatTile label="Valor actual" value={summary?.valor_actual ?? 0} blurred={hideAmounts} />
         <StatTile
@@ -59,11 +59,11 @@ export default function InversionDashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-1">
           <DonutBreakdown title="Composición real" items={donutItems} hideAmounts={hideAmounts} legendBelow />
         </div>
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <InvestmentHistoryChart hideAmounts={hideAmounts} />
         </div>
       </div>

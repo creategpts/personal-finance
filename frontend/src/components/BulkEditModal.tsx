@@ -72,7 +72,7 @@ export default function BulkEditModal({ count, categories, onClose, onApply }: P
           </select>
         </label>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             Origen
             <select className="mt-1.5 input" value={origin} onChange={(e) => setOrigin(e.target.value)}>

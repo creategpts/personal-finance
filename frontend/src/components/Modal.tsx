@@ -46,19 +46,15 @@ export default function Modal({ title, size = 'md', onClose, onSubmit, headerAct
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
         className={`flex max-h-[85vh] w-full ${SIZE_CLASS[size]} flex-col rounded-2xl border border-line bg-surface shadow-2xl`}
       >
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-linesoft px-7 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-linesoft px-5 py-4 sm:px-7 sm:py-5">
           <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
           {headerAction}
         </div>
 
-        {/* no overflow-auto here by default: a popover (e.g. CategoryPicker) positioned
-        inside would get clipped by a scrolling ancestor. Modals whose content can
-        legitimately outgrow max-h (CsvPreviewModal's table) opt into scrolling via
-        bodyClassName instead. */}
-        <div className={`min-h-0 flex-1 px-7 py-6 ${bodyClassName ?? ''}`}>{children}</div>
+        <div className={`min-h-0 flex-1 px-5 py-5 sm:px-7 sm:py-6 ${bodyClassName ?? ''}`}>{children}</div>
 
         {footer && (
-          <div className="flex shrink-0 items-center justify-between gap-4 border-t border-linesoft px-7 py-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-linesoft px-5 py-4 sm:px-7">
             {footer}
           </div>
         )}

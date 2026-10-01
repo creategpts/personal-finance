@@ -91,7 +91,7 @@ export default function Inversion() {
     <div>
       <h1 className="mb-5 text-2xl font-semibold tracking-tight">Inversión</h1>
 
-      <div className="mb-5 flex items-center justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex gap-0.5 rounded-lg border border-line bg-surface p-0.5">
           {([
             ['dashboard', 'Dashboard'],

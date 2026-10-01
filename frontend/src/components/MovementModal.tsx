@@ -141,7 +141,7 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
       }
     >
       <div className="space-y-5">
-        <div className="grid grid-cols-[0.67fr_1.6fr] gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[0.67fr_1.6fr]">
           <label className="block text-sm">
             Importe
             <input
@@ -171,7 +171,7 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             Origen
             <div className="mt-1.5">
@@ -186,7 +186,7 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
           </label>
         </div>
 
-        <div className="flex items-start justify-end gap-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 sm:justify-end sm:gap-8">
           <label className="block text-sm">
             <span className="mb-1.5 block">Fecha</span>
             <input

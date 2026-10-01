@@ -28,8 +28,8 @@ export default function AccountBar() {
 
   return (
     <div
-      className="mb-6 grid gap-4"
-      style={{ gridTemplateColumns: `repeat(${accountRows.length}, minmax(0, 1fr))` }}
+      className="mb-6 grid gap-3 sm:gap-4"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}
     >
       {accountRows.map((item) => (
         <StatTile key={item.category} label={item.category} value={item.amount} blurred={hideAmounts} />

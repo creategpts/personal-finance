@@ -154,14 +154,14 @@ export default function CategoryModal({
         )}
 
         {!isSubcategory && (
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <label className="flex-1 text-sm">
               Icono
               <div className="mt-1.5">
                 <IconPicker value={icon} onChange={setIcon} />
               </div>
             </label>
-            <label className="w-20 text-sm">
+            <label className="w-full text-sm sm:w-20">
               Color
               <input
                 type="color"

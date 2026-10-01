@@ -101,7 +101,7 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
       <div className="space-y-5">
         <div>
           <span className="mb-1.5 block text-sm font-medium text-muted">Tipo</span>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(Object.keys(INVESTMENT_TYPE_LABELS) as InvestmentType[]).map((t) => (
               <button
                 key={t}
@@ -120,7 +120,7 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
           </div>
         </div>
 
-        <div className={hasIsin(type) ? 'grid grid-cols-2 gap-4' : ''}>
+        <div className={hasIsin(type) ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : ''}>
           <Field label="Nombre">
             <input required autoFocus className="input" placeholder="MSCI World Indexado…" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -144,7 +144,7 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
           </select>
         </Field>
 
-        <div className={type === 'seguros' ? '' : 'grid grid-cols-2 gap-4'}>
+        <div className={type === 'seguros' ? '' : 'grid grid-cols-1 gap-4 sm:grid-cols-2'}>
           <Field label="Peso objetivo cartera">
             <div className="relative">
               <input type="number" step="0.1" min="0" max="100" className="input pr-8" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} />

@@ -375,6 +375,39 @@ export default function Movimientos() {
     )
   }
 
+  function movementCard(m: Movement, indented = false) {
+    return (
+      <div
+        key={m.id}
+        onClick={() => {
+          setEditing(m)
+          setShowModal(true)
+        }}
+        className={`flex cursor-pointer items-start gap-3 px-4 py-3 active:bg-surface2 ${indented ? 'pl-8' : ''} ${selected.has(m.id) ? 'bg-surface2' : ''}`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium text-fg">{m.concept}</span>
+            <span
+              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
+                m.status === 'Done' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${m.status === 'Done' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {m.status}
+            </span>
+          </div>
+          <div className="num mt-0.5 text-xs text-muted">{formatDate(m.date)}</div>
+          <div className="mt-0.5 truncate text-xs text-faint">{m.origin} → {m.destination}</div>
+        </div>
+        <Money value={m.amount} className={`num shrink-0 text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+        <span onClick={(e) => e.stopPropagation()}>
+          <Check checked={selected.has(m.id)} onChange={() => toggleOne(m.id)} label="Seleccionar fila" />
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col">
       <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Movimientos</h1>
@@ -527,9 +560,9 @@ export default function Movimientos() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
         <div className="card min-h-0 flex-1 overflow-auto">
-        <table className="tbl">
+        <table className="tbl hidden md:table">
           <thead className="sticky top-0 z-10">
             <tr>
               <th
@@ -588,9 +621,42 @@ export default function Movimientos() {
             )}
           </tbody>
         </table>
+
+        <div className="divide-y divide-linesoft md:hidden">
+          {rows.length === 0 && <div className="px-4 py-10 text-center text-faint">Sin movimientos</div>}
+          {rows.map((row) => {
+            if (row.kind === 'single') return movementCard(row.m)
+            const isOpen = expanded.has(row.name)
+            const groupSelected = row.members.every((m) => selected.has(m.id))
+            return (
+              <Fragment key={`gc-${row.name}`}>
+                <div
+                  onClick={() => toggleGroup(row.name)}
+                  className="flex cursor-pointer items-center gap-3 bg-surface2/50 px-4 py-3 active:bg-surface2"
+                >
+                  <span className="w-2 shrink-0 text-faint">{isOpen ? '▾' : '▸'}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-fg">
+                      {row.name}
+                      <span className="ml-1.5 text-xs font-normal text-faint">· {row.members.length}</span>
+                    </div>
+                    <div className="num text-xs text-muted">
+                      {row.from === row.to ? formatDate(row.from) : `${formatDate(row.from)} – ${formatDate(row.to)}`}
+                    </div>
+                  </div>
+                  <Money value={row.total} className={`num shrink-0 text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <Check checked={groupSelected} onChange={() => toggleGroupSelect(row.members)} label="Seleccionar grupo" />
+                  </span>
+                </div>
+                {isOpen && row.members.map((m) => movementCard(m, true))}
+              </Fragment>
+            )
+          })}
+        </div>
         </div>
         {selected.size > 0 && (
-          <aside className="w-56 shrink-0 self-start rounded-xl border border-line bg-surface p-4">
+          <aside className="w-full shrink-0 self-start rounded-xl border border-line bg-surface p-4 md:w-56">
             <div className="mb-3 flex items-center justify-between gap-2">
               <span className="text-sm font-medium text-fg">{selected.size} seleccionados</span>
               <button

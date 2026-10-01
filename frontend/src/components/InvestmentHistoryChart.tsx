@@ -28,7 +28,7 @@ export default function InvestmentHistoryChart({ hideAmounts }: { hideAmounts: b
   const data = points.map((p) => ({ label: dateLabel(p.date), invertido: p.total_invertido, actual: p.valor_actual }))
 
   return (
-    <div className="card flex h-full flex-col p-5">
+    <div className="card flex h-80 flex-col p-5 lg:h-full">
       <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <h3 className="text-sm font-semibold text-fg">Evolución: capital invertido vs. valor actual</h3>
         <div className="flex flex-wrap gap-2">

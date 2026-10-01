@@ -92,7 +92,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
         </Field>
       )
     return (
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Meta total">
           <Adorned suffix="€">
             <input required type="number" step="0.01" min="0" className="input pr-8" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} />
@@ -164,7 +164,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Cuenta">
                 <select className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
                   {accounts.map((c) => (
@@ -212,7 +212,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
             <p className="text-sm font-medium text-fg">Cambiar objetivo</p>
             <p className="mb-3 text-xs text-muted">No reescribe el pasado: los meses anteriores mantienen el objetivo vigente entonces.</p>
             {targetInputs()}
-            <div className="mt-3 grid grid-cols-2 items-end gap-4">
+            <div className="mt-3 grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
               <Field label="A partir de">
                 <input type="month" className="input" value={changeMonth} onChange={(e) => setChangeMonth(e.target.value)} />
               </Field>

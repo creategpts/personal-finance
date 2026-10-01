@@ -190,7 +190,7 @@ export default function GoalsPanel() {
 
   return (
     <section className="mb-8">
-      <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold tracking-tight text-fg">Objetivos de ahorro e inversión</h2>
         <button
           onClick={() => {

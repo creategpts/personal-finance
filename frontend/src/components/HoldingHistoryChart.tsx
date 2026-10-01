@@ -29,7 +29,7 @@ export default function HoldingHistoryChart({
   const data = points.map((p) => ({ label: dateLabel(p.date), invertido: p.total_invertido, actual: p.valor_actual }))
 
   return (
-    <div className="card flex h-full flex-col p-5">
+    <div className="card flex h-80 flex-col p-5 lg:h-full">
       <h3 className="mb-4 shrink-0 text-sm font-semibold text-fg">Evolución: aportado vs. valor real</h3>
       {data.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-sm text-faint">Sin datos todavía</div>

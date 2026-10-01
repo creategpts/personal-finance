@@ -151,18 +151,18 @@ export default function Panel() {
           />
         </span>
       </p>
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatTile label="Disponible para gasto" value={sumByType('gasto')} blurred={hideAmounts} />
         <StatTile label="Ahorro" value={sumByType('ahorro')} blurred={hideAmounts} />
         <StatTile label="Inversión" value={sumByType('inversion')} blurred={hideAmounts} />
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-base font-semibold tracking-tight text-fg">En el periodo</h2>
         <PeriodSelector onChange={(from, to) => setRange({ from, to })} />
       </div>
 
-      <div className="mb-8 grid grid-cols-4 items-start gap-4">
+      <div className="mb-8 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <StatTile
             label="Ingresos"

@@ -207,7 +207,7 @@ export default function InvestmentLedger() {
       </button>
       <h1 className="mb-5 text-2xl font-semibold tracking-tight">{investment.name}</h1>
 
-      <div className="mb-5 grid grid-cols-2 items-stretch gap-6">
+      <div className="mb-5 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <div className="card h-full space-y-5 p-5">
           <div className="flex items-center justify-between rounded-lg border border-line bg-surface2/50 px-3 py-2.5 text-sm">
             <span className="text-muted">

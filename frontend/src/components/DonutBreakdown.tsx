@@ -114,7 +114,7 @@ export default function DonutBreakdown({
       {items.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-sm text-faint">Sin datos para este periodo</div>
       ) : (
-        <div className={`flex min-h-0 flex-1 gap-6 ${legendBelow ? 'flex-col items-center' : 'items-center'}`}>
+        <div className={`flex min-h-0 flex-1 flex-col items-center gap-6 ${legendBelow ? '' : 'sm:flex-row'}`}>
           <div className="relative h-40 w-40 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -165,7 +165,7 @@ export default function DonutBreakdown({
             )}
           </div>
 
-          <div className={`min-w-0 space-y-2.5 overflow-y-auto ${legendBelow ? 'w-full' : 'flex-1'}`}>
+          <div className={`w-full min-w-0 space-y-2.5 overflow-y-auto ${legendBelow ? '' : 'sm:flex-1'}`}>
             {buildLegendRows(items).map((row) => (
               <button
                 key={row.key}

@@ -42,7 +42,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
+          <div className="grid max-h-48 grid-cols-6 gap-1 overflow-y-auto sm:grid-cols-8">
             {results.map((name) => (
               <button
                 key={name}

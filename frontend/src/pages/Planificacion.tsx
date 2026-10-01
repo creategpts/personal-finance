@@ -76,7 +76,7 @@ function RecurringTable({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold tracking-tight text-fg">{title}</h2>
         <button onClick={onNew} className="btn-primary">
           {addLabel}
@@ -85,7 +85,7 @@ function RecurringTable({
       <p className="mb-4 text-sm text-muted">{description}</p>
 
       <div className="card overflow-hidden">
-        <table className="tbl">
+        <table className="tbl hidden md:table">
           <thead>
             <tr>
               <th className="w-6">
@@ -174,6 +174,79 @@ function RecurringTable({
             )}
           </tbody>
         </table>
+
+        <div className="divide-y divide-linesoft md:hidden">
+          {plans.length === 0 && <div className="px-4 py-10 text-center text-faint">{emptyLabel}</div>}
+          {grouped.map((g) => {
+            const open = expanded.has(g.category)
+            return (
+              <Fragment key={`c-${g.category}`}>
+                <div
+                  onClick={() => toggleExpand(g.category)}
+                  className="flex cursor-pointer items-center gap-3 px-4 py-3 active:bg-surface2"
+                >
+                  <span className="w-3 shrink-0 text-faint">{open ? '▾' : '▸'}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-fg">
+                    {g.category}
+                    <span className="ml-2 text-xs font-normal text-faint">({g.plans.length})</span>
+                  </span>
+                  <div className="shrink-0 text-right">
+                    <Money value={g.activeAnnual} className={`block text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                    <Money value={g.activeAnnual / 12} className={`block text-xs text-faint ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                  </div>
+                </div>
+                {open &&
+                  g.plans.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => onEdit(p)}
+                      className={`flex cursor-pointer items-start gap-3 bg-surface2/40 px-4 py-3 pl-8 active:bg-surface2 ${p.active ? '' : 'opacity-50'}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium text-fg">{p.concept}</span>
+                          {!p.auto_generate && (
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                              Solo análisis
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onToggleActive(p)
+                            }}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              p.active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-surface2 text-muted'
+                            }`}
+                          >
+                            {p.active ? 'Activo' : 'Pausado'}
+                          </button>
+                        </div>
+                        <div className="mt-0.5 truncate text-xs text-muted">
+                          {p[otherField]} · {FREQUENCY_LABELS[p.frequency]} · {formatDate(p.next_due_date)}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <Money value={annualCost(p)} className={`block text-sm text-muted ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                        <Money value={annualCost(p) / 12} className={`block text-xs text-faint ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                      </div>
+                    </div>
+                  ))}
+              </Fragment>
+            )
+          })}
+          {grouped.length > 0 && (
+            <div className="flex items-center gap-3 border-t-2 border-line px-4 py-3 font-semibold">
+              <span className="min-w-0 flex-1 text-fg">
+                Total <span className="text-xs font-normal text-faint">(solo activos)</span>
+              </span>
+              <div className="shrink-0 text-right">
+                <Money value={annualTotal} className={`block text-sm text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+                <Money value={annualTotal / 12} className={`block text-xs text-faint ${hideAmounts ? 'select-none blur-sm' : ''}`} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -238,7 +311,7 @@ export default function Planificacion() {
 
       <GoalsPanel />
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <RecurringTable
           title="Gastos recurrentes"
           addLabel="+ Nuevo gasto recurrente"

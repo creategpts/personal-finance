@@ -117,8 +117,7 @@ export default function PeriodSelector({ onChange, initialFrom, initialTo }: Pro
   const stepDisabled = mode === 'range'
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* mode: segmented control */}
+    <div className="flex flex-col flex-wrap items-start gap-2 sm:flex-row sm:items-center">
       <div className="flex h-9 items-center gap-0.5 rounded-lg border border-line bg-surface px-1 text-sm">
         {MODES.map(([key, label]) => (
           <button
@@ -134,54 +133,53 @@ export default function PeriodSelector({ onChange, initialFrom, initialTo }: Pro
         ))}
       </div>
 
-      {/* prev arrow — outside the value box */}
-      <button type="button" onClick={() => step(-1)} disabled={stepDisabled} aria-label="Periodo anterior" className={arrowBtn}>
-        <ChevronLeftIcon width={22} height={22} />
-      </button>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => step(-1)} disabled={stepDisabled} aria-label="Periodo anterior" className={arrowBtn}>
+          <ChevronLeftIcon width={22} height={22} />
+        </button>
 
-      {/* value box */}
-      <div className="flex h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3">
-        {mode === 'month' && (
-          <select className={bareSelect} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-            {MONTHS.map((m, i) => (
-              <option key={m} value={i + 1}>{m}</option>
-            ))}
-          </select>
-        )}
-        {mode === 'quarter' && (
-          <select className={bareSelect} value={quarter} onChange={(e) => setQuarter(Number(e.target.value))}>
-            {[1, 2, 3, 4].map((q) => (
-              <option key={q} value={q}>T{q}</option>
-            ))}
-          </select>
-        )}
-        {mode === 'range' ? (
-          <>
-            <input type="date" className={bareDate} value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
-            <span className="text-faint">–</span>
-            <input type="date" className={bareDate} value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
-          </>
-        ) : (
-          <select className={bareSelect} value={year} onChange={(e) => setYear(Number(e.target.value))}>
-            {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        )}
+        <div className="flex h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3">
+          {mode === 'month' && (
+            <select className={bareSelect} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+              {MONTHS.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          )}
+          {mode === 'quarter' && (
+            <select className={bareSelect} value={quarter} onChange={(e) => setQuarter(Number(e.target.value))}>
+              {[1, 2, 3, 4].map((q) => (
+                <option key={q} value={q}>T{q}</option>
+              ))}
+            </select>
+          )}
+          {mode === 'range' ? (
+            <>
+              <input type="date" className={bareDate} value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
+              <span className="text-faint">–</span>
+              <input type="date" className={bareDate} value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
+            </>
+          ) : (
+            <select className={bareSelect} value={year} onChange={(e) => setYear(Number(e.target.value))}>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <button type="button" onClick={() => step(1)} disabled={stepDisabled} aria-label="Periodo siguiente" className={arrowBtn}>
+          <ChevronRightIcon width={22} height={22} />
+        </button>
+
+        <button
+          type="button"
+          onClick={goToday}
+          className="flex h-9 items-center rounded-lg border border-line bg-surface px-3 text-sm font-medium text-muted transition-colors hover:text-fg"
+        >
+          Hoy
+        </button>
       </div>
-
-      {/* next arrow — outside the value box */}
-      <button type="button" onClick={() => step(1)} disabled={stepDisabled} aria-label="Periodo siguiente" className={arrowBtn}>
-        <ChevronRightIcon width={22} height={22} />
-      </button>
-
-      <button
-        type="button"
-        onClick={goToday}
-        className="flex h-9 items-center rounded-lg border border-line bg-surface px-3 text-sm font-medium text-muted transition-colors hover:text-fg"
-      >
-        Hoy
-      </button>
     </div>
   )
 }

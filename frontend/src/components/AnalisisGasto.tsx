@@ -119,7 +119,7 @@ export default function AnalisisGasto({ hideAmounts }: { hideAmounts: boolean })
         <PeriodSelector onChange={(from, to) => setRange({ from, to })} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DonutBreakdown
           title="En qué se va el dinero"
           info={INFO_EXPENSE}
