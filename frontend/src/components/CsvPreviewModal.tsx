@@ -39,6 +39,7 @@ export default function CsvPreviewModal({ initial, categories, existingCount, on
           status: r.status,
           origin: r.origin.trim(),
           destination: r.destination.trim(),
+          group_name: null,
         })),
       )
     } finally {

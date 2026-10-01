@@ -44,6 +44,8 @@ def wipe(db):
         models.Movement,
         models.Category,
         models.Setting,
+        models.InvestmentTransaction,
+        models.Investment,
     ):
         db.query(model).delete()
     db.commit()
@@ -204,6 +206,33 @@ def seed_goals(db):
     db.commit()
 
 
+def seed_investments(db):
+    holdings = [
+        # name, type, isin, target_weight, current_price, [(months_ago, units, price_paid), ...]
+        ("MSCI World Indexado", "fondo_indexado", "IE00B4L5Y983", 50, 28.40,
+         [(18, 40, 22.10), (12, 30, 24.80), (6, 30, 26.50), (1, 20, 27.90)]),
+        ("Fondo Mixto Conservador", "fondo_inversion", "ES0112345678", 20, 11.05,
+         [(10, 200, 10.20), (4, 150, 10.70)]),
+        ("Bitcoin", "criptomoneda", None, 20, 58000.0,
+         [(14, 0.02, 45000.0), (7, 0.015, 52000.0), (2, 0.01, 60000.0)]),
+        ("Oro físico", "mmpp", None, 10, 68.5,
+         [(9, 15, 60.0)]),
+    ]
+    today = datetime.date.today()
+    for name, type_, isin, target_weight, current_price, txs in holdings:
+        inv = models.Investment(
+            name=name, type=type_, isin=isin, target_weight=target_weight,
+            current_price=current_price, active=True,
+        )
+        for months_ago, units, price in txs:
+            d = (today.replace(day=1) - datetime.timedelta(days=months_ago * 30))
+            inv.transactions.append(
+                models.InvestmentTransaction(date=d, units=units, amount=round(units * price, 2))
+            )
+        db.add(inv)
+    db.commit()
+
+
 def run():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -215,6 +244,7 @@ def run():
         seed_budgets(db)
         seed_recurring(db)
         seed_goals(db)
+        seed_investments(db)
         print("Mock data loaded.")
     finally:
         db.close()

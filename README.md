@@ -41,8 +41,20 @@ docker compose run --rm app python -m app.seed_mock
 
 ```bash
 docker compose run --rm app python test_goals.py
+docker compose run --rm app python test_investments.py
 ```
 
 ## Backup
 
 Backups (JSON) se generan solos una vez por semana. En Docker van a `./data/backup/` (junto a la base de datos); la ruta se configura con `LIFETRACK_BACKUP_DIR`. También hay backup/restore manual vía API. Ver `backend/app/routers/backup.py`.
+
+## Desplegar en Vercel (acceso desde el móvil)
+
+Vercel no tiene disco persistente, así que hace falta una base de datos Postgres aparte (p. ej. [Neon](https://neon.tech), tiene capa gratuita). Docker/SQLite en local no cambian — esto es solo para el despliegue.
+
+1. Crea una base de datos Postgres en Neon y copia su connection string.
+2. `vercel login` (con tu cuenta) y `vercel` desde la raíz del repo para enlazar el proyecto.
+3. En el dashboard de Vercel, añade la variable de entorno `LIFETRACK_DB_URL` con el connection string de Neon (formato `postgresql://...`).
+4. `vercel --prod` para desplegar. `vercel.json` ya construye el frontend (Vite) como estático y `api/index.py` sirve el backend FastAPI como función serverless bajo `/api/*`.
+
+Las tablas se crean solas al primer arranque (`create_all`, igual que en Docker) — no hace falta migrar nada a mano en una base nueva.

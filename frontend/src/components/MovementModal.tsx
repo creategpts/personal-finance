@@ -5,6 +5,7 @@ import Money from './Money'
 import { TrashIcon } from './Icons'
 import CategoryPicker, { type PickerItem } from './CategoryPicker'
 import Modal from './Modal'
+import { useSettings } from '../settings'
 
 const ACCOUNT_TYPE_SET = new Set<string>(ACCOUNT_TYPES)
 const isAccountCategory = (c: Category) => ACCOUNT_TYPE_SET.has(c.type)
@@ -29,15 +30,23 @@ interface Props {
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function MovementModal({ categories, initial, onClose, onDelete, onSave }: Props) {
+  const settings = useSettings()
   const allOrigins = categories.filter((c) => isOrigin(c.type))
   const allDestinations = categories.filter((c) => isDestination(c.type))
+
+  // default for a new movement: the category chosen in Configuración > General,
+  // falling back to the first available if it's unset or no longer exists.
+  const pick = (list: Category[], preferred: string) =>
+    (list.some((c) => c.name === preferred) ? preferred : list[0]?.name) ?? ''
+  const defaultOrigin = initial?.origin ?? pick(allOrigins, settings.default_origin)
+  const defaultDestination = initial?.destination ?? pick(allDestinations, settings.default_destination)
 
   const [concept, setConcept] = useState(initial?.concept ?? '')
   const [amount, setAmount] = useState(initial?.amount?.toString() ?? '')
   const [status, setStatus] = useState<Movement['status']>(initial?.status ?? 'Done')
   const [date, setDate] = useState(initial?.date ?? today())
-  const [origin, setOrigin] = useState(initial?.origin ?? allOrigins[0]?.name ?? '')
-  const [destination, setDestination] = useState(initial?.destination ?? allDestinations[0]?.name ?? '')
+  const [origin, setOrigin] = useState(defaultOrigin)
+  const [destination, setDestination] = useState(defaultDestination)
   const [saving, setSaving] = useState(false)
 
   // un Ingreso puede ir directo a un Gasto (p. ej. Pluxee: dinero que nunca pasa por
@@ -83,8 +92,8 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
     amount !== (initial?.amount?.toString() ?? '') ||
     status !== (initial?.status ?? 'Done') ||
     date !== (initial?.date ?? today()) ||
-    origin !== (initial?.origin ?? allOrigins[0]?.name ?? '') ||
-    destination !== (initial?.destination ?? allDestinations[0]?.name ?? '')
+    origin !== defaultOrigin ||
+    destination !== defaultDestination
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -98,6 +107,7 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
         date,
         origin,
         destination,
+        group_name: initial?.group_name ?? null, // preserve group; not editable here (only via bulk Agrupar)
       })
     } finally {
       setSaving(false)

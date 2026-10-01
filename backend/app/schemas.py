@@ -1,4 +1,4 @@
-from datetime import date as date_type
+from datetime import date as date_type, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -40,6 +40,7 @@ class MovementBase(BaseModel):
     date: date_type
     origin: str
     destination: str
+    group_name: str | None = None
 
 
 class MovementCreate(MovementBase):
@@ -204,4 +205,91 @@ class GoalProgress(BaseModel):
     completed: bool
     meta: float | None = None  # target_date: effective meta (total balance target)
     deadline: str | None = None  # target_date: "YYYY-MM"
+
+
+# ---- Investments ----
+class InvestmentTransactionBase(BaseModel):
+    date: date_type
+    units: float  # positive = aportación/compra, negative = venta
+    amount: float  # positive = dinero entrante, negative = dinero saliente
+    note: str | None = None
+
+
+class InvestmentTransactionCreate(InvestmentTransactionBase):
+    pass
+
+
+class InvestmentTransactionOut(InvestmentTransactionBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    investment_id: int
+
+
+class InvestmentBase(BaseModel):
+    name: str
+    type: str  # one of models.INVESTMENT_TYPES
+    isin: str | None = None
+    target_weight: float = 0
+    ft_symbol: str | None = None  # FT tearsheet "s=" param, e.g. "LU1234567890:EUR"
+    active: bool = True
+
+
+class InvestmentCreate(InvestmentBase):
+    pass
+
+
+class InvestmentUpdate(InvestmentBase):
+    current_price: float | None = None  # manual price edit; omit to keep current
+
+
+class InvestmentStats(BaseModel):
+    units_held: float
+    avg_cost: float
+    total_invertido: float
+    valor_actual: float
+    plusvalia: float
+    rentabilidad: float
+
+
+class InvestmentOut(InvestmentBase):
+    id: int
+    current_price: float
+    price_updated_at: datetime | None = None
+    transactions: list[InvestmentTransactionOut]
+    stats: InvestmentStats
+
+
+class PortfolioSummary(BaseModel):
+    total_invertido: float
+    valor_actual: float
+    plusvalia: float
+    rentabilidad: float
+
+
+class PortfolioCompositionItem(BaseModel):
+    investment_id: int
+    name: str
+    type: str
+    valor_actual: float
+    weight_real: float
+    weight_target: float
+
+
+class PriceRefreshResult(BaseModel):
+    investment_id: int
+    ok: bool
+    price: float | None = None
+    error: str | None = None
+
+
+class PriceLookupResult(BaseModel):
+    ok: bool
+    price: float | None = None
+    error: str | None = None
+
+
+class PortfolioHistoryPoint(BaseModel):
+    date: str
+    total_invertido: float
+    valor_actual: float
 

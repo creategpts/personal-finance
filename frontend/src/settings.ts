@@ -7,9 +7,17 @@ export interface Settings {
   app_name: string
   user_name: string
   favicon: string // an emoji
+  default_origin: string // Category.name preselected as Origen in a new movement ('' = first available)
+  default_destination: string // Category.name preselected as Destino in a new movement ('' = first available)
 }
 
-const DEFAULTS: Settings = { app_name: 'Life Track', user_name: 'Usuario', favicon: '🏛️' }
+const DEFAULTS: Settings = {
+  app_name: 'Life Track',
+  user_name: 'Usuario',
+  favicon: '🏛️',
+  default_origin: '',
+  default_destination: '',
+}
 
 let value: Settings = { ...DEFAULTS }
 const subs = new Set<() => void>()

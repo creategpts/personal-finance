@@ -3,6 +3,7 @@ import Panel from './pages/Panel'
 import Movimientos from './pages/Movimientos'
 import Analisis from './pages/Analisis'
 import Planificacion from './pages/Planificacion'
+import Inversion from './pages/Inversion'
 import Configuracion from './pages/Configuracion'
 import UserMenu from './components/UserMenu'
 import { useSettings } from './settings'
@@ -11,6 +12,7 @@ const navItems = [
   { to: '/movimientos', label: 'Movimientos', end: false },
   { to: '/analisis', label: 'Análisis', end: false },
   { to: '/planificacion', label: 'Planificación', end: false },
+  { to: '/inversion', label: 'Inversión', end: false },
 ]
 
 function App() {
@@ -51,6 +53,7 @@ function App() {
             <Route path="/movimientos" element={<Movimientos />} />
             <Route path="/analisis" element={<Analisis />} />
             <Route path="/planificacion" element={<Planificacion />} />
+            <Route path="/inversion" element={<Inversion />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Routes>
         </div>

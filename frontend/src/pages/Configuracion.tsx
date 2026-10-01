@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { api, type Category, type CategoryType } from '../api'
-import { isAccount } from '../categoryTypes'
+import { isAccount, isOrigin, isDestination } from '../categoryTypes'
 import { ACCOUNT_TYPES, typeLabel as typeLabelOf } from '../accountTypes'
 import InfoHint from '../components/InfoHint'
 import CategoryModal from '../components/CategoryModal'
@@ -532,11 +532,42 @@ function BackupSection() {
   )
 }
 
-function GeneralSection() {
+// Options for a "default origin/destination" select, mirroring the Movimientos picker:
+// income/expense categories flat (each top expense category with its subcategories under
+// it), plus all accounts grouped under "Cuenta". Values are Category.name.
+function categoryOptions(categories: Category[], kind: 'origin' | 'destination') {
+  const eligible = categories.filter((c) => (kind === 'origin' ? isOrigin(c.type) : isDestination(c.type)))
+  const flow = eligible.filter((c) => !isAccount(c.type) && c.parent_id === null)
+  const accounts = eligible.filter((c) => isAccount(c.type))
+  const subsOf = (id: number) => categories.filter((c) => c.parent_id === id)
+  return (
+    <>
+      {flow.map((c) => {
+        const subs = subsOf(c.id)
+        if (subs.length === 0) return <option key={c.id} value={c.name}>{c.name}</option>
+        return (
+          <optgroup key={c.id} label={c.name}>
+            <option value={c.name}>{c.name}</option>
+            {subs.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </optgroup>
+        )
+      })}
+      {accounts.length > 0 && (
+        <optgroup label="Cuenta">
+          {accounts.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+        </optgroup>
+      )}
+    </>
+  )
+}
+
+function GeneralSection({ categories }: { categories: Category[] }) {
   const settings = useSettings()
   const [appName, setAppName] = useState(settings.app_name)
   const [userName, setUserName] = useState(settings.user_name)
   const [favicon, setFavicon] = useState(settings.favicon)
+  const [defaultOrigin, setDefaultOrigin] = useState(settings.default_origin)
+  const [defaultDestination, setDefaultDestination] = useState(settings.default_destination)
   const [saving, setSaving] = useState(false)
 
   // settings load async on startup; resync the form once they arrive (and after save)
@@ -544,15 +575,27 @@ function GeneralSection() {
     setAppName(settings.app_name)
     setUserName(settings.user_name)
     setFavicon(settings.favicon)
+    setDefaultOrigin(settings.default_origin)
+    setDefaultDestination(settings.default_destination)
   }, [settings])
 
   const dirty =
-    appName !== settings.app_name || userName !== settings.user_name || favicon !== settings.favicon
+    appName !== settings.app_name ||
+    userName !== settings.user_name ||
+    favicon !== settings.favicon ||
+    defaultOrigin !== settings.default_origin ||
+    defaultDestination !== settings.default_destination
 
   async function save() {
     setSaving(true)
     try {
-      await saveSettings({ app_name: appName.trim(), user_name: userName.trim(), favicon: favicon.trim() })
+      await saveSettings({
+        app_name: appName.trim(),
+        user_name: userName.trim(),
+        favicon: favicon.trim(),
+        default_origin: defaultOrigin,
+        default_destination: defaultDestination,
+      })
     } finally {
       setSaving(false)
     }
@@ -569,7 +612,7 @@ function GeneralSection() {
           Nombre de usuario
           <input className="mt-1 input" value={userName} onChange={(e) => setUserName(e.target.value)} />
         </label>
-        <label className="block text-sm">
+        <label className="mb-4 block text-sm">
           Favicon (un emoji)
           <div className="mt-1 flex items-center gap-3">
             <input
@@ -580,6 +623,26 @@ function GeneralSection() {
             />
             <span className="text-2xl">{favicon}</span>
           </div>
+        </label>
+        <label className="mb-4 block text-sm">
+          <span className="inline-flex items-center gap-1">
+            Origen predeterminado
+            <InfoHint text="Categoría preseleccionada como Origen al crear un movimiento nuevo." />
+          </span>
+          <select className="mt-1 input" value={defaultOrigin} onChange={(e) => setDefaultOrigin(e.target.value)}>
+            <option value="">(primero disponible)</option>
+            {categoryOptions(categories, 'origin')}
+          </select>
+        </label>
+        <label className="block text-sm">
+          <span className="inline-flex items-center gap-1">
+            Destino predeterminado
+            <InfoHint text="Categoría preseleccionada como Destino al crear un movimiento nuevo." />
+          </span>
+          <select className="mt-1 input" value={defaultDestination} onChange={(e) => setDefaultDestination(e.target.value)}>
+            <option value="">(primero disponible)</option>
+            {categoryOptions(categories, 'destination')}
+          </select>
         </label>
       </div>
       <div className="mt-3 flex justify-end">
@@ -625,7 +688,7 @@ export default function Configuracion() {
       </div>
 
       <div className="min-h-0 flex-1">
-        {tab === 'general' && <GeneralSection />}
+        {tab === 'general' && <GeneralSection categories={categories} />}
 
         {tab === 'cuentas' && <CuentasSection categories={categories} onChanged={refresh} />}
 

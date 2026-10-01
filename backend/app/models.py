@@ -45,6 +45,12 @@ class RecurrenceFrequency(str, enum.Enum):
     yearly = "yearly"
 
 
+# Fixed investment holding types (Panel de inversión). Independent of ACCOUNT_TYPES /
+# Cuenta — a holding here is not a Category, it's a position tracked by its own
+# transactions (aportaciones/ventas), not by Movimientos.
+INVESTMENT_TYPES = ("fondo_indexado", "fondo_inversion", "criptomoneda", "mmpp")
+
+
 class Category(Base):
     __tablename__ = "categories"
 
@@ -101,6 +107,10 @@ class Movement(Base):
     week = Column(Integer, nullable=False)
     origin = Column(String, nullable=False)
     destination = Column(String, nullable=False)
+    # display-only umbrella label (e.g. "Vacaciones con Nerea 2026"): movements sharing
+    # a non-null group_name collapse into one expandable row in the Movimientos table.
+    # Purely presentational — each movement still counts individually in KPIs/Análisis.
+    group_name = Column(String, nullable=True, index=True)
 
 
 class Budget(Base):
@@ -154,6 +164,74 @@ class GoalTarget(Base):
     target_month = Column(Integer, nullable=True)
 
     goal = relationship("Goal", back_populates="targets")
+
+
+class Investment(Base):
+    """A holding tracked for the Panel de inversión (fondo indexado, fondo de
+    inversión, criptomoneda, MMPP). Independent of Category/Cuenta — capital
+    invertido and rentabilidad are derived from its own transactions, not from
+    Movimientos."""
+
+    __tablename__ = "investments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # one of INVESTMENT_TYPES
+    isin = Column(String, nullable=True)
+    target_weight = Column(Float, nullable=False, default=0)  # objetivo de peso en cartera, %
+    current_price = Column(Float, nullable=False, default=0)  # valor liquidativo/precio actual
+    price_updated_at = Column(DateTime, nullable=True)
+    # FT tearsheet symbol (the "s=" query param, e.g. "LU1234567890:EUR") used to
+    # scrape current_price on demand. Null = price is set manually only.
+    ft_symbol = Column(String, nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+
+    transactions = relationship(
+        "InvestmentTransaction",
+        back_populates="investment",
+        cascade="all, delete-orphan",
+        order_by="InvestmentTransaction.date",
+    )
+    snapshots = relationship(
+        "PriceSnapshot",
+        back_populates="investment",
+        cascade="all, delete-orphan",
+        order_by="PriceSnapshot.date",
+    )
+
+
+class InvestmentTransaction(Base):
+    """One aportación (units/amount > 0) or venta (units/amount < 0) against a
+    holding. avg cost is derived from these, weighted-average-cost method."""
+
+    __tablename__ = "investment_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    investment_id = Column(Integer, ForeignKey("investments.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    units = Column(Float, nullable=False)
+    amount = Column(Float, nullable=False)
+    note = Column(String, nullable=True)
+
+    investment = relationship("Investment", back_populates="transactions")
+
+
+class PriceSnapshot(Base):
+    """One current_price reading for a holding on a given day — recorded every
+    time a price is set (manual edit or FT refresh), at most one per day. Feeds
+    the invertido-vs-valor-actual time series; a day with no reading simply has
+    no valor_actual contribution for that holding until the next one."""
+
+    __tablename__ = "price_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    investment_id = Column(Integer, ForeignKey("investments.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    price = Column(Float, nullable=False)
+
+    __table_args__ = (UniqueConstraint("investment_id", "date", name="uq_price_snapshot_investment_date"),)
+
+    investment = relationship("Investment", back_populates="snapshots")
 
 
 class RecurringExpense(Base):

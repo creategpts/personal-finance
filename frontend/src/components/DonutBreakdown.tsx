@@ -11,6 +11,7 @@ export interface DonutItem {
   color: string
   icon?: string // lucide name; omit for items with no category (e.g. account types)
   badge?: string // small annotation next to the label (e.g. "pasivo")
+  targetPercent?: number
 }
 
 const RADIAN = Math.PI / 180
@@ -29,12 +30,14 @@ export default function DonutBreakdown({
   items,
   hideAmounts,
   onItemClick,
+  legendBelow,
 }: {
   title: string
   info?: string
   items: DonutItem[]
   hideAmounts?: boolean
   onItemClick?: (key: string) => void
+  legendBelow?: boolean
 }) {
   const total = items.reduce((s, i) => s + i.amount, 0)
   const blur = hideAmounts ? 'select-none blur-sm' : ''
@@ -62,7 +65,7 @@ export default function DonutBreakdown({
       {items.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-sm text-faint">Sin datos para este periodo</div>
       ) : (
-        <div className="flex min-h-0 flex-1 items-center gap-6">
+        <div className={`flex min-h-0 flex-1 gap-6 ${legendBelow ? 'flex-col items-center' : 'items-center'}`}>
           <div className="relative h-40 w-40 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -111,7 +114,7 @@ export default function DonutBreakdown({
             )}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-2.5 overflow-y-auto">
+          <div className={`min-w-0 space-y-2.5 overflow-y-auto ${legendBelow ? 'w-full' : 'flex-1'}`}>
             {items.map((it) => (
               <button
                 key={it.key}
@@ -136,6 +139,9 @@ export default function DonutBreakdown({
                 <span className="w-10 shrink-0 text-right text-xs text-faint">
                   {total > 0 ? Math.round((it.amount / total) * 100) : 0}%
                 </span>
+                {it.targetPercent !== undefined && (
+                  <span className="w-16 shrink-0 text-right text-xs text-faint">obj. {it.targetPercent.toFixed(0)}%</span>
+                )}
               </button>
             ))}
           </div>

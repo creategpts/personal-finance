@@ -34,6 +34,7 @@ export interface Movement {
   week: number
   origin: string
   destination: string
+  group_name: string | null // display-only umbrella label; movements sharing one collapse into a group row
 }
 
 export type MovementInput = Omit<Movement, 'id' | 'year' | 'month' | 'week'>
@@ -171,6 +172,87 @@ export interface GoalProgress {
   deadline: string | null // target_date: "YYYY-MM"
 }
 
+export type InvestmentType = 'fondo_indexado' | 'fondo_inversion' | 'criptomoneda' | 'mmpp'
+
+export interface InvestmentTransaction {
+  id: number
+  investment_id: number
+  date: string
+  units: number
+  amount: number
+  note: string | null
+}
+
+export type InvestmentTransactionInput = Omit<InvestmentTransaction, 'id' | 'investment_id'>
+
+export interface InvestmentStats {
+  units_held: number
+  avg_cost: number
+  total_invertido: number
+  valor_actual: number
+  plusvalia: number
+  rentabilidad: number
+}
+
+export interface Investment {
+  id: number
+  name: string
+  type: InvestmentType
+  isin: string | null
+  target_weight: number
+  ft_symbol: string | null
+  active: boolean
+  current_price: number
+  price_updated_at: string | null
+  transactions: InvestmentTransaction[]
+  stats: InvestmentStats
+}
+
+export type InvestmentInput = {
+  name: string
+  type: InvestmentType
+  isin: string | null
+  target_weight: number
+  ft_symbol: string | null
+  active: boolean
+  current_price?: number
+}
+
+export interface PortfolioSummary {
+  total_invertido: number
+  valor_actual: number
+  plusvalia: number
+  rentabilidad: number
+}
+
+export interface PortfolioCompositionItem {
+  investment_id: number
+  name: string
+  type: InvestmentType
+  valor_actual: number
+  weight_real: number
+  weight_target: number
+}
+
+export interface PriceRefreshResult {
+  investment_id: number
+  ok: boolean
+  price: number | null
+  error: string | null
+}
+
+export interface PriceLookupResult {
+  ok: boolean
+  price: number | null
+  error: string | null
+}
+
+export interface PortfolioHistoryPoint {
+  date: string
+  total_invertido: number
+  valor_actual: number
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -265,6 +347,26 @@ export const api = {
     get: () => request<Record<string, string>>('/settings'),
     set: (data: Record<string, string>) =>
       request<Record<string, string>>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  investments: {
+    list: () => request<Investment[]>('/investments'),
+    create: (data: InvestmentInput) =>
+      request<Investment>('/investments', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: InvestmentInput) =>
+      request<Investment>(`/investments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: number) => request<void>(`/investments/${id}`, { method: 'DELETE' }),
+    addTransaction: (id: number, data: InvestmentTransactionInput) =>
+      request<Investment>(`/investments/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    removeTransaction: (id: number, transactionId: number) =>
+      request<Investment>(`/investments/${id}/transactions/${transactionId}`, { method: 'DELETE' }),
+    refreshPrice: (id: number) =>
+      request<PriceRefreshResult>(`/investments/${id}/refresh-price`, { method: 'POST' }),
+    refreshAllPrices: () => request<PriceRefreshResult[]>('/investments/refresh-prices', { method: 'POST' }),
+    priceLookup: (isin: string) => request<PriceLookupResult>(`/investments/price-lookup?isin=${encodeURIComponent(isin)}`),
+    history: (type?: InvestmentType) =>
+      request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),
+    summary: () => request<PortfolioSummary>('/investments/summary'),
+    composition: () => request<PortfolioCompositionItem[]>('/investments/composition'),
   },
   backup: {
     list: () => request<{ dir: string; files: string[] }>('/backup'),

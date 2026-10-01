@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, type Category, type KpiName, type Movement, type MovementInput, type MovementStatus } from '../api'
+import { buildRows } from '../movementGroups'
 import MovementModal from '../components/MovementModal'
 import BulkEditModal, { type BulkOverrides } from '../components/BulkEditModal'
+import GroupModal from '../components/GroupModal'
 import CsvPreviewModal from '../components/CsvPreviewModal'
 import AccountBar from '../components/AccountBar'
 import Money from '../components/Money'
@@ -66,6 +68,8 @@ export default function Movimientos() {
   const [menuOpen, setMenuOpen] = useState(false) // ⋯ menu
   const [selected, setSelected] = useState<Set<number>>(new Set()) // row selection (bulk actions)
   const [bulkOpen, setBulkOpen] = useState(false)
+  const [groupOpen, setGroupOpen] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set()) // open group umbrellas
   const [csvPreview, setCsvPreview] = useState<MovementInput[] | null>(null) // parsed CSV awaiting review
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -125,6 +129,29 @@ export default function Movimientos() {
       .filter((m) => m.amount >= min && m.amount <= max)
       .sort((a, b) => (sortDir === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)))
   }, [movements, sortDir, fStatus, fOrigin, destinationMatchSet, fFrom, fTo, fMin, fMax])
+
+  // group umbrellas collapse into single expandable rows, in the sorted order.
+  // catType lets the group total net expenses against incoming money / transfers.
+  const catType = useMemo(() => new Map(categories.map((c) => [c.name, c.type])), [categories])
+  const rows = useMemo(() => buildRows(sorted, catType), [sorted, catType])
+
+  // existing umbrella names, for the Agrupar datalist
+  const existingGroups = useMemo(
+    () => [...new Set(movements.map((m) => m.group_name).filter((g): g is string => !!g))].sort(),
+    [movements],
+  )
+
+  // if every selected movement already shares one group, prefill the modal with it
+  const selectedGroupName = useMemo(() => {
+    const names = new Set([...selected].map((id) => movements.find((m) => m.id === id)?.group_name ?? null))
+    return names.size === 1 ? ([...names][0] ?? undefined) : undefined
+  }, [selected, movements])
+
+  // any selected movement already in a group -> offer Desagrupar
+  const selectedHasGroup = useMemo(
+    () => [...selected].some((id) => !!movements.find((m) => m.id === id)?.group_name),
+    [selected, movements],
+  )
 
   // Periodo is a baseline view control (always applies a range, has its own "Hoy"
   // reset), not an optional filter — it doesn't count toward hasFilters/Limpiar.
@@ -201,6 +228,7 @@ export default function Movimientos() {
         status: r[3]?.trim() === 'Plan' ? 'Plan' : 'Done',
         origin: r[4]?.trim() ?? '',
         destination: r[5]?.trim() ?? '',
+        group_name: null,
       })
     }
     if (!records.length) return alert('No se encontraron filas válidas.')
@@ -258,6 +286,7 @@ export default function Movimientos() {
         date: m.date,
         origin: m.origin,
         destination: m.destination,
+        group_name: m.group_name, // preserve; bulk edit doesn't touch the group
         ...o,
       })
     }
@@ -266,11 +295,85 @@ export default function Movimientos() {
     await refresh()
   }
 
+  // set (or clear, when null) the umbrella group on every selected movement
+  async function applyGroup(groupName: string | null) {
+    for (const id of selected) {
+      const m = movements.find((x) => x.id === id)
+      if (!m) continue
+      await api.movements.update(id, {
+        concept: m.concept,
+        amount: m.amount,
+        status: m.status,
+        date: m.date,
+        origin: m.origin,
+        destination: m.destination,
+        group_name: groupName,
+      })
+    }
+    setGroupOpen(false)
+    setSelected(new Set())
+    if (groupName) setExpanded((prev) => new Set(prev).add(groupName))
+    await refresh()
+  }
+
+  function toggleGroup(name: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
+  function toggleGroupSelect(members: Movement[]) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (members.every((m) => prev.has(m.id))) members.forEach((m) => next.delete(m.id))
+      else members.forEach((m) => next.add(m.id))
+      return next
+    })
+  }
+
   async function deleteBulk() {
     if (!confirm(`¿Eliminar ${selected.size} movimientos? Acción irreversible.`)) return
     for (const id of selected) await api.movements.remove(id)
     setSelected(new Set())
     await refresh()
+  }
+
+  // one movement row; indented = shown nested under its group umbrella
+  function movementRow(m: Movement, indented = false) {
+    return (
+      <tr
+        key={m.id}
+        onClick={() => {
+          setEditing(m)
+          setShowModal(true)
+        }}
+        className={`cursor-pointer hover:bg-surface2 ${selected.has(m.id) ? 'bg-surface2' : ''}`}
+      >
+        <td className={`num text-muted ${indented ? 'pl-6' : ''}`}>
+          {indented && <span className="mr-2 text-faint">•</span>}
+          {formatDate(m.date)}
+        </td>
+        <td className="font-medium text-fg">{m.concept}</td>
+        <td className="text-right"><Money value={m.amount} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
+        <td>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+              m.status === 'Done' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${m.status === 'Done' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            {m.status}
+          </span>
+        </td>
+        <td>{m.origin}</td>
+        <td>{m.destination}</td>
+        <td className="text-right" onClick={(e) => e.stopPropagation()}>
+          <Check checked={selected.has(m.id)} onChange={() => toggleOne(m.id)} label="Seleccionar fila" />
+        </td>
+      </tr>
+    )
   }
 
   return (
@@ -460,36 +563,37 @@ export default function Movimientos() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((m) => (
-              <tr
-                key={m.id}
-                onClick={() => {
-                  setEditing(m)
-                  setShowModal(true)
-                }}
-                className={`cursor-pointer hover:bg-surface2 ${selected.has(m.id) ? 'bg-surface2' : ''}`}
-              >
-                <td className="num text-muted">{formatDate(m.date)}</td>
-                <td className="font-medium text-fg">{m.concept}</td>
-                <td className="text-right"><Money value={m.amount} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
-                <td>
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      m.status === 'Done' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                    }`}
+            {rows.map((row) => {
+              if (row.kind === 'single') return movementRow(row.m)
+              const isOpen = expanded.has(row.name)
+              const groupSelected = row.members.every((m) => selected.has(m.id))
+              return (
+                <Fragment key={`g-${row.name}`}>
+                  <tr
+                    onClick={() => toggleGroup(row.name)}
+                    className="cursor-pointer bg-surface2/50 hover:bg-surface2"
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${m.status === 'Done' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                    {m.status}
-                  </span>
-                </td>
-                <td>{m.origin}</td>
-                <td>{m.destination}</td>
-                <td className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <Check checked={selected.has(m.id)} onChange={() => toggleOne(m.id)} label="Seleccionar fila" />
-                </td>
-              </tr>
-            ))}
-            {sorted.length === 0 && (
+                    <td className="num text-muted">
+                      {row.from === row.to ? formatDate(row.from) : `${formatDate(row.from)} – ${formatDate(row.to)}`}
+                    </td>
+                    <td className="font-semibold text-fg">
+                      <span className="mr-1.5 inline-block w-2 text-faint">{isOpen ? '▾' : '▸'}</span>
+                      {row.name}
+                      <span className="ml-1.5 text-xs font-normal text-faint">· {row.members.length}</span>
+                    </td>
+                    <td className="text-right"><Money value={row.total} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <Check checked={groupSelected} onChange={() => toggleGroupSelect(row.members)} label="Seleccionar grupo" />
+                    </td>
+                  </tr>
+                  {isOpen && row.members.map((m) => movementRow(m, true))}
+                </Fragment>
+              )
+            })}
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-faint">
                   Sin movimientos
@@ -516,6 +620,15 @@ export default function Movimientos() {
               <button onClick={() => setBulkOpen(true)} className="btn w-full">
                 Editar
               </button>
+              {selectedHasGroup ? (
+                <button onClick={() => applyGroup(null)} className="btn w-full">
+                  Desagrupar
+                </button>
+              ) : (
+                <button onClick={() => setGroupOpen(true)} className="btn w-full">
+                  Agrupar
+                </button>
+              )}
               <button onClick={() => exportCsv(movements.filter((m) => selected.has(m.id)))} className="btn w-full">
                 Descargar CSV
               </button>
@@ -554,6 +667,16 @@ export default function Movimientos() {
           categories={categories}
           onClose={() => setBulkOpen(false)}
           onApply={applyBulk}
+        />
+      )}
+
+      {groupOpen && (
+        <GroupModal
+          count={selected.size}
+          existingGroups={existingGroups}
+          initialName={selectedGroupName}
+          onClose={() => setGroupOpen(false)}
+          onApply={applyGroup}
         />
       )}
 
