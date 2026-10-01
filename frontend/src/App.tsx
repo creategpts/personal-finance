@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AuthView, SignedIn, SignedOut } from '@neondatabase/auth/react/ui'
 import { ArrowLeftRight, ChartPie, Target, TrendingUp } from 'lucide-react'
@@ -9,7 +10,7 @@ import Inversion from './pages/Inversion'
 import InvestmentLedger from './pages/InvestmentLedger'
 import Configuracion from './pages/Configuracion'
 import UserMenu from './components/UserMenu'
-import { useSettings } from './settings'
+import { loadSettings, useSettings } from './settings'
 
 const navItems = [
   { to: '/movimientos', label: 'Movimientos', end: false, icon: ArrowLeftRight },
@@ -29,6 +30,9 @@ function AuthPage() {
 
 function Shell() {
   const { app_name, favicon } = useSettings()
+  useEffect(() => {
+    loadSettings()
+  }, [])
   return (
     <div className="flex h-screen flex-col overflow-hidden text-fg md:flex-row">
       <header className="flex shrink-0 items-center justify-between border-b border-line bg-surface px-4 py-3 md:hidden">
