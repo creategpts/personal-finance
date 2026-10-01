@@ -4,7 +4,7 @@ import ThemeToggle from './ThemeToggle'
 import HideAmountsToggle from './HideAmountsToggle'
 import { useSettings, initialsOf } from '../settings'
 
-export default function UserMenu() {
+export default function UserMenu({ openDown }: { openDown?: boolean }) {
   const [open, setOpen] = useState(false)
   const { user_name } = useSettings()
 
@@ -13,7 +13,11 @@ export default function UserMenu() {
       {open && <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />}
 
       {open && (
-        <div className="absolute bottom-full left-0 z-20 mb-2 w-full overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-lg">
+        <div
+          className={`absolute z-20 overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-lg ${
+            openDown ? 'right-0 top-full mt-2 w-56' : 'bottom-full left-0 mb-2 w-full'
+          }`}
+        >
           <NavLink
             to="/configuracion"
             onClick={() => setOpen(false)}
