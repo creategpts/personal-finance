@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from . import models
+from .auth import NeonAuthMiddleware
 from .database import engine, SessionLocal
 from .seed import seed_categories
 from .routers import (
@@ -89,6 +90,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(NeonAuthMiddleware)
 
 app.include_router(categories.router)
 app.include_router(movements.router)

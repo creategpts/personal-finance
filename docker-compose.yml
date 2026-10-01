@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - VITE_NEON_AUTH_URL=${VITE_NEON_AUTH_URL:-}
     ports:
       # ponytail: host port overridable for when 8000 is taken; LIFETRACK_PORT=8001 docker compose up
       - "${LIFETRACK_PORT:-8000}:8000"
@@ -11,4 +14,5 @@ services:
     environment:
       - LIFETRACK_DB_URL=sqlite:////data/life_track.db
       - LIFETRACK_BACKUP_DIR=/data/backup
+      - NEON_AUTH_BASE_URL=${NEON_AUTH_BASE_URL:-}
     restart: unless-stopped

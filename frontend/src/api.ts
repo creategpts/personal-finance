@@ -1,3 +1,5 @@
+import { authClient } from './lib/auth-client'
+
 // 'income', 'expense', or one of ACCOUNT_TYPES — hence a plain string
 export type CategoryType = string
 // The three fixed account types — the single source of truth for account grouping.
@@ -271,9 +273,18 @@ export interface PendingAllocation {
   price?: number | null
 }
 
+function sessionTokenFromBetaSdkActualShape(data: unknown): string | undefined {
+  return (data as { session?: { token?: string } } | null)?.session?.token
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const { data } = await authClient.token()
+  const token = sessionTokenFromBetaSdkActualShape(data)
   const res = await fetch(`/api${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   })
   if (!res.ok) {

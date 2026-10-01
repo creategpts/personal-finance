@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
+import { Providers } from './providers.tsx'
 import { loadSettings } from './settings.ts'
 
 // apply saved theme before first paint (no flash) — dark by default
@@ -14,7 +15,9 @@ loadSettings()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <Providers>
+        <App />
+      </Providers>
     </BrowserRouter>
   </StrictMode>,
 )

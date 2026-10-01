@@ -3,6 +3,8 @@
 
 FROM node:20-slim AS frontend
 WORKDIR /frontend
+ARG VITE_NEON_AUTH_URL
+ENV VITE_NEON_AUTH_URL=$VITE_NEON_AUTH_URL
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
