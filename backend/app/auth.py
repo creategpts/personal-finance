@@ -1,5 +1,7 @@
 import base64
 import os
+import time
+from functools import lru_cache
 from urllib.parse import urlparse
 
 import jwt
@@ -26,10 +28,13 @@ def _signing_key(token: str, jwks: dict) -> Ed25519PublicKey:
     raise ValueError("Matching JWK not found")
 
 
+@lru_cache(maxsize=1)
+def _cached_jwks(_bucket: int) -> dict:
+    return requests.get(JWKS_URL, timeout=5).json()
+
+
 def validate_neon_token(token: str) -> dict:
-    # ponytail: fetches JWKS fresh every call, no cache — fine at personal-app
-    # traffic; add a TTL cache here if this ever becomes a bottleneck.
-    jwks = requests.get(JWKS_URL, timeout=5).json()
+    jwks = _cached_jwks(int(time.time() // 600))  # ponytail: 10-minute TTL via time-bucketed cache key
     signing_key = _signing_key(token, jwks)
     return jwt.decode(token, key=signing_key, algorithms=["EdDSA"], issuer=ORIGIN, audience=ORIGIN)
 
