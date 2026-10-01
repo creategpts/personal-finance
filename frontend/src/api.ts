@@ -172,7 +172,9 @@ export interface GoalProgress {
   deadline: string | null // target_date: "YYYY-MM"
 }
 
-export type InvestmentType = 'fondo_indexado' | 'fondo_inversion' | 'criptomoneda' | 'mmpp'
+export type InvestmentType = 'fondo_inversion' | 'criptomoneda' | 'mmpp' | 'seguros'
+
+export type InvestmentTransactionKind = 'flow' | 'adjustment'
 
 export interface InvestmentTransaction {
   id: number
@@ -180,6 +182,7 @@ export interface InvestmentTransaction {
   date: string
   units: number
   amount: number
+  kind: InvestmentTransactionKind
   note: string | null
 }
 
@@ -199,6 +202,7 @@ export interface Investment {
   name: string
   type: InvestmentType
   isin: string | null
+  account: string | null
   target_weight: number
   ft_symbol: string | null
   active: boolean
@@ -212,6 +216,7 @@ export type InvestmentInput = {
   name: string
   type: InvestmentType
   isin: string | null
+  account: string | null
   target_weight: number
   ft_symbol: string | null
   active: boolean
@@ -251,6 +256,19 @@ export interface PortfolioHistoryPoint {
   date: string
   total_invertido: number
   valor_actual: number
+}
+
+export interface AccountCheckItem {
+  account: string
+  net_moved: number
+  contributed: number
+  difference: number
+}
+
+export interface PendingAllocation {
+  investment_id: number
+  amount: number
+  price?: number | null
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -363,8 +381,15 @@ export const api = {
       request<PriceRefreshResult>(`/investments/${id}/refresh-price`, { method: 'POST' }),
     refreshAllPrices: () => request<PriceRefreshResult[]>('/investments/refresh-prices', { method: 'POST' }),
     priceLookup: (isin: string) => request<PriceLookupResult>(`/investments/price-lookup?isin=${encodeURIComponent(isin)}`),
+    accountCheck: () => request<AccountCheckItem[]>('/investments/account-check'),
+    assignPending: (account: string, data: { date: string; allocations: PendingAllocation[] }) =>
+      request<AccountCheckItem[]>(`/investments/account-check/${encodeURIComponent(account)}/assign`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     history: (type?: InvestmentType) =>
       request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),
+    historyFor: (id: number) => request<PortfolioHistoryPoint[]>(`/investments/${id}/history`),
     summary: () => request<PortfolioSummary>('/investments/summary'),
     composition: () => request<PortfolioCompositionItem[]>('/investments/composition'),
   },

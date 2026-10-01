@@ -1,25 +1,27 @@
 import type { Investment, InvestmentType } from './api'
 
 export const INVESTMENT_TYPE_LABELS: Record<InvestmentType, string> = {
-  fondo_indexado: 'Fondo indexado',
-  fondo_inversion: 'Fondo de inversión',
-  criptomoneda: 'Criptomoneda',
+  fondo_inversion: 'Fondos de inversión',
+  criptomoneda: 'Criptomonedas',
   mmpp: 'Metales preciosos',
+  seguros: 'Seguros',
 }
 
 export const INVESTMENT_TYPE_COLORS: Record<InvestmentType, string> = {
-  fondo_indexado: '#2563eb',
-  fondo_inversion: '#7c3aed',
+  fondo_inversion: '#2563eb',
   criptomoneda: '#f59e0b',
   mmpp: '#ca8a04',
+  seguros: '#059669',
 }
 
 export const INVESTMENT_TYPE_ICONS: Record<InvestmentType, string> = {
-  fondo_indexado: 'TrendingUp',
-  fondo_inversion: 'PieChart',
+  fondo_inversion: 'ChartPie',
   criptomoneda: 'Bitcoin',
   mmpp: 'Gem',
+  seguros: 'Shield',
 }
+
+export const INVESTMENT_TYPES_WITH_ISIN: InvestmentType[] = ['fondo_inversion']
 
 const MAX_LIGHTEN = 0.65
 

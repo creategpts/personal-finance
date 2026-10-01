@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import HideAmountsToggle from './HideAmountsToggle'
 import { useSettings, initialsOf } from '../settings'
 
 export default function UserMenu() {
@@ -25,6 +26,7 @@ export default function UserMenu() {
             Configuración
           </NavLink>
           <ThemeToggle />
+          <HideAmountsToggle />
         </div>
       )}
 

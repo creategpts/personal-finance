@@ -36,7 +36,7 @@ Concepto de un Movimiento cuyo Destino es una Categoría de Gasto, con el Origen
 El Concepto Ahorro o Inversión, en positivo, cuando el dinero entra en una Cuenta de ese Tipo. Se suma siempre, sea cual sea el Origen.
 
 **Retirada**:
-El Concepto Ahorro o Inversión, en negativo, cuando el dinero sale de una Cuenta de ese Tipo. Se resta siempre, sea cual sea el Destino (a diferencia de una Aportación/Retirada anterior que solo se reconocía yendo hacia una Cuenta corriente — ese modelo se abandonó). Un Movimiento entre Ahorro e Inversión genera una Retirada en el Origen y una Aportación en el Destino a la vez.
+El Concepto Ahorro o Inversión, en negativo, cuando el dinero sale de una Cuenta de ese Tipo. Se resta siempre, sea cual sea el Destino (a diferencia de una Aportación/Retirada anterior que solo se reconocía yendo hacia una Cuenta corriente — ese modelo se abandonó). Un Movimiento entre Ahorro e Inversión genera una Aportación en el Destino, pero **no** una Retirada en el Origen cuando el Origen es Ahorro y el Destino es Inversión — excepción deliberada (decisión del usuario): ese euro cuenta como aportado a Inversión sin dejar de contar como ahorro, así que Ahorro + Inversión sumados ya no cuadran con el cambio real de patrimonio para ese movimiento. En cualquier otra combinación (p. ej. Inversión -> Ahorro) sí aplica la Retirada normal.
 
 **Traspaso**:
 El caso particular de un Movimiento entre dos Cuentas del mismo Tipo (p. ej. dos Cuentas de Ahorro distintas). Genera una Retirada y una Aportación del mismo Tipo a la vez, que se cancelan — el total de ese Tipo no cambia, aunque el Movimiento sigue siendo visible si se filtra por él.

@@ -61,6 +61,15 @@ if engine.url.get_backend_name() == "sqlite":
         conn.execute(text("UPDATE categories SET type = 'ahorro' WHERE type = 'saving'"))
         conn.execute(text("UPDATE categories SET type = 'inversion' WHERE type = 'investment'"))
         conn.execute(text("DROP TABLE IF EXISTS account_types"))
+        inv_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(investments)"))]
+        if "account" not in inv_cols:
+            conn.execute(text("ALTER TABLE investments ADD COLUMN account TEXT"))
+        # one-time merge: fondo_indexado folded into fondo_inversion (single "Fondos
+        # de inversión" type). No-op on repeat runs once no row has the old value.
+        conn.execute(text("UPDATE investments SET type = 'fondo_inversion' WHERE type = 'fondo_indexado'"))
+        tx_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(investment_transactions)"))]
+        if "kind" not in tx_cols:
+            conn.execute(text("ALTER TABLE investment_transactions ADD COLUMN kind TEXT NOT NULL DEFAULT 'flow'"))
 
 with SessionLocal() as db:
     seed_categories(db)

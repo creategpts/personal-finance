@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { api, type Investment, type InvestmentInput, type InvestmentType } from '../api'
-import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
+import { api, type Category, type Investment, type InvestmentInput, type InvestmentType } from '../api'
+import { INVESTMENT_TYPES_WITH_ISIN, INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import Modal from './Modal'
 import { TrashIcon } from './Icons'
 
 interface Props {
   initial?: Investment | null
+  accounts: Category[]
+  initialAccount?: string
   onClose: () => void
   onSave: (data: InvestmentInput) => Promise<void>
   onDelete?: () => Promise<void>
@@ -21,14 +23,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export default function InvestmentModal({ initial, onClose, onSave, onDelete, onRefreshPrice }: Props) {
+export default function InvestmentModal({ initial, accounts, initialAccount, onClose, onSave, onDelete, onRefreshPrice }: Props) {
   const editing = !!initial
+  const hasIsin = (t: InvestmentType) => INVESTMENT_TYPES_WITH_ISIN.includes(t)
 
   const [name, setName] = useState(initial?.name ?? '')
-  const [type, setType] = useState<InvestmentType>(initial?.type ?? 'fondo_indexado')
+  const [type, setType] = useState<InvestmentType>(initial?.type ?? 'fondo_inversion')
   const [isin, setIsin] = useState(initial?.isin ?? '')
+  const [account, setAccount] = useState(initial?.account ?? initialAccount ?? accounts[0]?.name ?? '')
   const [targetWeight, setTargetWeight] = useState(initial?.target_weight?.toString() ?? '0')
-  const [ftSymbol, setFtSymbol] = useState(initial?.ft_symbol ?? '')
   const [currentPrice, setCurrentPrice] = useState(initial?.current_price?.toString() ?? '0')
   const [active, setActive] = useState(initial?.active ?? true)
   const [busy, setBusy] = useState(false)
@@ -43,7 +46,6 @@ export default function InvestmentModal({ initial, onClose, onSave, onDelete, on
       const result = await api.investments.priceLookup(isin)
       if (result.ok && result.price != null) {
         setCurrentPrice(String(result.price))
-        if (!ftSymbol) setFtSymbol(`${isin}:EUR`)
       } else {
         setLookupError(result.error ?? 'No se pudo obtener el valor liquidativo')
       }
@@ -62,8 +64,9 @@ export default function InvestmentModal({ initial, onClose, onSave, onDelete, on
         name,
         type,
         isin: isin || null,
+        account: account || null,
         target_weight: Number(targetWeight),
-        ft_symbol: ftSymbol || null,
+        ft_symbol: null,
         active,
         current_price: Number(currentPrice),
       })
@@ -96,17 +99,6 @@ export default function InvestmentModal({ initial, onClose, onSave, onDelete, on
       }
     >
       <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Nombre">
-            <input required autoFocus className="input" placeholder="MSCI World Indexado…" value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <Field label="ISIN">
-            <input className="input" placeholder="Opcional" value={isin} onChange={(e) => setIsin(e.target.value)} onBlur={handleIsinBlur} />
-            {lookupBusy && <span className="mt-1 block text-xs text-faint">Buscando valor liquidativo…</span>}
-            {!lookupBusy && lookupError && <span className="mt-1 block text-xs text-red-500">{lookupError}</span>}
-          </Field>
-        </div>
-
         <div>
           <span className="mb-1.5 block text-sm font-medium text-muted">Tipo</span>
           <div className="grid grid-cols-4 gap-2">
@@ -114,7 +106,10 @@ export default function InvestmentModal({ initial, onClose, onSave, onDelete, on
               <button
                 key={t}
                 type="button"
-                onClick={() => setType(t)}
+                onClick={() => {
+                  setType(t)
+                  if (!hasIsin(t)) setIsin('')
+                }}
                 className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
                   type === t ? 'border-fg bg-surface2 text-fg' : 'border-line text-muted hover:text-fg'
                 }`}
@@ -125,22 +120,46 @@ export default function InvestmentModal({ initial, onClose, onSave, onDelete, on
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className={hasIsin(type) ? 'grid grid-cols-2 gap-4' : ''}>
+          <Field label="Nombre">
+            <input required autoFocus className="input" placeholder="MSCI World Indexado…" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          {hasIsin(type) && (
+            <Field label="ISIN">
+              <input required className="input" value={isin} onChange={(e) => setIsin(e.target.value)} onBlur={handleIsinBlur} />
+              {lookupBusy && <span className="mt-1 block text-xs text-faint">Buscando valor liquidativo…</span>}
+              {!lookupBusy && lookupError && <span className="mt-1 block text-xs text-red-500">{lookupError}</span>}
+            </Field>
+          )}
+        </div>
+
+        <Field label="Cuenta">
+          <select required className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
+            {accounts.length === 0 && <option value="">Sin cuentas de inversión</option>}
+            {accounts.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <div className={type === 'seguros' ? '' : 'grid grid-cols-2 gap-4'}>
           <Field label="Peso objetivo cartera">
             <div className="relative">
               <input type="number" step="0.1" min="0" max="100" className="input pr-8" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-faint">%</span>
             </div>
           </Field>
-          <Field label="Valor liquidativo actual">
-            <input type="number" step="0.0001" min="0" className="input" value={currentPrice} onChange={(e) => setCurrentPrice(e.target.value)} />
-          </Field>
-          <Field label="Símbolo FT (s=)">
-            <input className="input" placeholder="LU1234567890:EUR" value={ftSymbol} onChange={(e) => setFtSymbol(e.target.value)} />
-          </Field>
+          {type !== 'seguros' && (
+            <Field label="Valor liquidativo actual">
+              <input type="number" step="0.0001" min="0" className="input" value={currentPrice} onChange={(e) => setCurrentPrice(e.target.value)} />
+              {!hasIsin(type) && <span className="mt-1 block text-xs text-faint">Sin ISIN no hay precio en tiempo real — actualízalo aquí a mano</span>}
+            </Field>
+          )}
         </div>
 
-        {editing && onRefreshPrice && (ftSymbol || isin) && (
+        {editing && onRefreshPrice && isin && (
           <button type="button" disabled={busy} onClick={onRefreshPrice} className="btn text-sm">
             Actualizar precio desde FT
           </button>

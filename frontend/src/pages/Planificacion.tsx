@@ -4,6 +4,7 @@ import RecurringModal from '../components/RecurringModal'
 import GoalsPanel from '../components/GoalsPanel'
 import Money from '../components/Money'
 import { ExpandIcon, ShrinkIcon } from '../components/Icons'
+import { useHideAmounts } from '../hideAmounts'
 
 // "2026-08-09" -> "09/08/2026" (no TZ shift)
 const formatDate = (iso: string) => iso.split('-').reverse().join('/')
@@ -27,6 +28,7 @@ function RecurringTable({
   description,
   plans,
   groupField,
+  hideAmounts,
   onNew,
   onEdit,
   onToggleActive,
@@ -37,6 +39,7 @@ function RecurringTable({
   description: string
   plans: RecurringExpense[]
   groupField: 'origin' | 'destination'
+  hideAmounts: boolean
   onNew: () => void
   onEdit: (p: RecurringExpense) => void
   onToggleActive: (p: RecurringExpense) => void
@@ -112,8 +115,8 @@ function RecurringTable({
                       {g.category}
                       <span className="ml-2 text-xs text-faint">({g.plans.length})</span>
                     </td>
-                    <td className="text-right"><Money value={g.activeAnnual} /></td>
-                    <td className="text-right"><Money value={g.activeAnnual / 12} /></td>
+                    <td className="text-right"><Money value={g.activeAnnual} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
+                    <td className="text-right"><Money value={g.activeAnnual / 12} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
                   </tr>
                   {open &&
                     g.plans.map((p) => (
@@ -145,8 +148,8 @@ function RecurringTable({
                             {p.active ? 'Activo' : 'Pausado'}
                           </button>
                         </td>
-                        <td className="text-right text-muted"><Money value={annualCost(p)} /></td>
-                        <td className="text-right text-muted"><Money value={annualCost(p) / 12} /></td>
+                        <td className="text-right text-muted"><Money value={annualCost(p)} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
+                        <td className="text-right text-muted"><Money value={annualCost(p) / 12} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
                       </tr>
                     ))}
                 </Fragment>
@@ -158,8 +161,8 @@ function RecurringTable({
                 <td className="text-fg">
                   Total <span className="text-xs font-normal text-faint">(solo activos)</span>
                 </td>
-                <td className="text-right text-fg"><Money value={annualTotal} /></td>
-                <td className="text-right text-fg"><Money value={annualTotal / 12} /></td>
+                <td className="text-right text-fg"><Money value={annualTotal} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
+                <td className="text-right text-fg"><Money value={annualTotal / 12} className={hideAmounts ? 'select-none blur-sm' : ''} /></td>
               </tr>
             )}
             {plans.length === 0 && (
@@ -177,6 +180,7 @@ function RecurringTable({
 }
 
 export default function Planificacion() {
+  const hideAmounts = useHideAmounts()
   const [plans, setPlans] = useState<RecurringExpense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [editing, setEditing] = useState<RecurringExpense | null>(null)
@@ -242,6 +246,7 @@ export default function Planificacion() {
           description="Los gastos marcados para generación automática entran en Movimientos como Plan al llegar la fecha. El resto solo se planifica y analiza a año vista (sin fecha fija: corte de pelo, ITV, taller…)."
           plans={expensePlans}
           groupField="destination"
+          hideAmounts={hideAmounts}
           onNew={() => openNew('gasto')}
           onEdit={(p) => {
             setEditing(p)
@@ -256,6 +261,7 @@ export default function Planificacion() {
           description="Los ingresos marcados para generación automática entran en Movimientos como Plan al llegar la fecha. El resto solo se planifica y analiza a año vista."
           plans={incomePlans}
           groupField="origin"
+          hideAmounts={hideAmounts}
           onNew={() => openNew('ingreso')}
           onEdit={(p) => {
             setEditing(p)

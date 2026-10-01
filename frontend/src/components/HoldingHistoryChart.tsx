@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type InvestmentType, type PortfolioHistoryPoint } from '../api'
-import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
+import { api, type PortfolioHistoryPoint } from '../api'
 
 const AXIS_COLOR = '#a3a3a3'
 const eur = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -12,40 +11,26 @@ function dateLabel(iso: string) {
   return `${d}/${m}/${y.slice(2)}`
 }
 
-const FILTERS: { label: string; type?: InvestmentType }[] = [
-  { label: 'Todas' },
-  ...(Object.keys(INVESTMENT_TYPE_LABELS) as InvestmentType[]).map((type) => ({ label: INVESTMENT_TYPE_LABELS[type], type })),
-]
-
-export default function InvestmentHistoryChart({ hideAmounts }: { hideAmounts: boolean }) {
-  const [filter, setFilter] = useState<InvestmentType | undefined>(undefined)
+export default function HoldingHistoryChart({
+  investmentId,
+  transactionCount,
+  hideAmounts,
+}: {
+  investmentId: number
+  transactionCount: number
+  hideAmounts: boolean
+}) {
   const [points, setPoints] = useState<PortfolioHistoryPoint[]>([])
 
   useEffect(() => {
-    api.investments.history(filter).then(setPoints)
-  }, [filter])
+    api.investments.historyFor(investmentId).then(setPoints)
+  }, [investmentId, transactionCount])
 
   const data = points.map((p) => ({ label: dateLabel(p.date), invertido: p.total_invertido, actual: p.valor_actual }))
 
   return (
     <div className="card flex h-full flex-col p-5">
-      <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-4">
-        <h3 className="text-sm font-semibold text-fg">Evolución: capital invertido vs. valor actual</h3>
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((f) => (
-            <button
-              key={f.label}
-              onClick={() => setFilter(f.type)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                filter === f.type ? 'bg-primary text-primaryfg' : 'border border-line bg-surface text-muted hover:bg-surface2'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      <h3 className="mb-4 shrink-0 text-sm font-semibold text-fg">Evolución: aportado vs. valor real</h3>
       {data.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-sm text-faint">Sin datos todavía</div>
       ) : (
@@ -63,8 +48,8 @@ export default function InvestmentHistoryChart({ hideAmounts }: { hideAmounts: b
                 cursor={{ stroke: 'var(--line)' }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="stepAfter" dataKey="invertido" name="Capital invertido" stroke="#6b7280" strokeWidth={2} dot={false} />
-              <Line type="stepAfter" dataKey="actual" name="Valor actual" stroke="#16a34a" strokeWidth={2} dot={false} />
+              <Line type="stepAfter" dataKey="invertido" name="Total aportado" stroke="#6b7280" strokeWidth={2} dot={false} />
+              <Line type="stepAfter" dataKey="actual" name="Valor real" stroke="#16a34a" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>

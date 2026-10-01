@@ -48,7 +48,7 @@ class RecurrenceFrequency(str, enum.Enum):
 # Fixed investment holding types (Panel de inversión). Independent of ACCOUNT_TYPES /
 # Cuenta — a holding here is not a Category, it's a position tracked by its own
 # transactions (aportaciones/ventas), not by Movimientos.
-INVESTMENT_TYPES = ("fondo_indexado", "fondo_inversion", "criptomoneda", "mmpp")
+INVESTMENT_TYPES = ("fondo_inversion", "criptomoneda", "mmpp", "seguros")
 
 
 class Category(Base):
@@ -168,9 +168,10 @@ class GoalTarget(Base):
 
 class Investment(Base):
     """A holding tracked for the Panel de inversión (fondo indexado, fondo de
-    inversión, criptomoneda, MMPP). Independent of Category/Cuenta — capital
-    invertido and rentabilidad are derived from its own transactions, not from
-    Movimientos."""
+    inversión, criptomoneda, MMPP). capital invertido and rentabilidad are
+    derived from its own transactions, not from Movimientos — account just
+    scopes it to the Cuenta (type='inversion') the money for it sits in,
+    linking it to the general ledger for the pending-assignment flow."""
 
     __tablename__ = "investments"
 
@@ -178,6 +179,9 @@ class Investment(Base):
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)  # one of INVESTMENT_TYPES
     isin = Column(String, nullable=True)
+    # Category.name of the Cuenta (type='inversion') this holding's money sits in.
+    # Nullable: holdings created before this field existed have none until edited.
+    account = Column(String, nullable=True)
     target_weight = Column(Float, nullable=False, default=0)  # objetivo de peso en cartera, %
     current_price = Column(Float, nullable=False, default=0)  # valor liquidativo/precio actual
     price_updated_at = Column(DateTime, nullable=True)
@@ -202,7 +206,12 @@ class Investment(Base):
 
 class InvestmentTransaction(Base):
     """One aportación (units/amount > 0) or venta (units/amount < 0) against a
-    holding. avg cost is derived from these, weighted-average-cost method."""
+    holding. avg cost is derived from these, weighted-average-cost method.
+
+    kind="flow": real cash movement (aportación/venta), counts toward total_invertido.
+    kind="adjustment": manual valuation change (lump-sum holdings only, e.g. seguros) —
+    counts toward valor_actual but not total_invertido. units is unused (0.0) for
+    lump-sum holdings; they have no per-unit price."""
 
     __tablename__ = "investment_transactions"
 
@@ -211,6 +220,7 @@ class InvestmentTransaction(Base):
     date = Column(Date, nullable=False, index=True)
     units = Column(Float, nullable=False)
     amount = Column(Float, nullable=False)
+    kind = Column(String, nullable=False, default="flow")
     note = Column(String, nullable=True)
 
     investment = relationship("Investment", back_populates="transactions")

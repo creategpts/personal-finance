@@ -4,6 +4,7 @@ import Movimientos from './pages/Movimientos'
 import Analisis from './pages/Analisis'
 import Planificacion from './pages/Planificacion'
 import Inversion from './pages/Inversion'
+import InvestmentLedger from './pages/InvestmentLedger'
 import Configuracion from './pages/Configuracion'
 import UserMenu from './components/UserMenu'
 import { useSettings } from './settings'
@@ -54,6 +55,7 @@ function App() {
             <Route path="/analisis" element={<Analisis />} />
             <Route path="/planificacion" element={<Planificacion />} />
             <Route path="/inversion" element={<Inversion />} />
+            <Route path="/inversion/:id" element={<InvestmentLedger />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Routes>
         </div>

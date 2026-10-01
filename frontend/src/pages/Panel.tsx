@@ -24,9 +24,8 @@ import StatTile from '../components/StatTile'
 import BudgetPanel from '../components/BudgetPanel'
 import Money from '../components/Money'
 import InfoHint from '../components/InfoHint'
-import { EyeIcon, EyeOffIcon } from '../components/Icons'
 import { useSettings, firstNameOf } from '../settings'
-import { useHideAmounts, toggleHideAmounts } from '../hideAmounts'
+import { useHideAmounts } from '../hideAmounts'
 
 const COLOR_PLANNED = '#0070f3'
 const COLOR_ACTUAL = '#f5a623'
@@ -45,7 +44,7 @@ const MONTH_NAMES_LOWER = [
 const KPI_INFO = {
   income: 'Suma de movimientos desde una categoría de Ingreso hacia cualquier cuenta, en el periodo seleccionado. Solo cuenta si la categoría está marcada «Es ingreso». Solo movimientos Realizados (Done).',
   expense: 'Suma de movimientos desde cualquier cuenta hacia una categoría de Gasto — incluye pagos hechos directamente desde Ahorro o Inversión. Solo cuenta si la categoría está marcada «Es gasto». Solo movimientos Realizados (Done).',
-  saving: 'Aportaciones menos retiradas de las cuentas con comportamiento Ahorro: suma cuando el dinero entra, resta cuando sale (a cualquier destino). Solo movimientos Realizados (Done).',
+  saving: 'Aportaciones menos retiradas de las cuentas con comportamiento Ahorro: suma cuando el dinero entra, resta cuando sale — excepto hacia Inversión, que no resta. Solo movimientos Realizados (Done).',
   investment: 'Aportaciones menos retiradas de las cuentas con comportamiento Inversión: suma cuando el dinero entra, resta cuando sale (a cualquier destino). Solo movimientos Realizados (Done).',
 }
 
@@ -140,18 +139,7 @@ export default function Panel() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Hola {firstNameOf(user_name)}</h1>
-        <button
-          onClick={toggleHideAmounts}
-          className="btn"
-          aria-label={hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-          title={hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-        >
-          {hideAmounts ? <EyeOffIcon /> : <EyeIcon />}
-          {hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-        </button>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">Hola {firstNameOf(user_name)}</h1>
 
       <p className="mb-6 mt-1 text-[15px] text-muted">
         A día {today.getDate()} de {MONTH_NAMES_LOWER[today.getMonth()]}, el valor total de tus

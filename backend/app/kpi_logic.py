@@ -73,6 +73,13 @@ def matches_kpi(movement: models.Movement, kpi: str, names: dict[str, set[str]])
         # exactly one side is the account — a valuation adjustment on the other side
         # (Revalorización/Devaluación) changes the balance but isn't a real aportación/retirada
         other = destination if origin_is_acct else origin
+        # exception: Ahorro -> Inversión doesn't count as a Retirada on the Ahorro side —
+        # it still counts as an Aportación on the Inversión side (kpi=="investment" case
+        # above is untouched). Deliberately asymmetric: the same euro now shows as an
+        # Aportación to Inversión without a matching Retirada from Ahorro, so Ahorro +
+        # Inversión summed no longer nets to the real patrimonio change for this movement.
+        if kpi == "saving" and origin_is_acct and other in names["investment"]:
+            return False
         return not _is_valuation_adjustment(other, names)
     return False
 
@@ -82,8 +89,9 @@ def kpi_amount(movement: models.Movement, kpi: str, names: dict[str, set[str]]) 
 
     Symmetric double-entry: +amount when the destination has this type, -amount
     when the origin has it. A transfer between two accounts of the SAME type nets
-    to zero automatically (e.g. two savings accounts); a saving->investment move debits
-    saving and credits investment in the same movement, with no special-casing.
+    to zero automatically (e.g. two savings accounts). Exception: a saving->investment
+    move only credits investment — matches_kpi excludes it from "saving" entirely, so
+    it never reaches here as a saving debit.
     """
     if kpi not in ("saving", "investment"):
         return movement.amount

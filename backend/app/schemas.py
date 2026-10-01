@@ -210,8 +210,9 @@ class GoalProgress(BaseModel):
 # ---- Investments ----
 class InvestmentTransactionBase(BaseModel):
     date: date_type
-    units: float  # positive = aportación/compra, negative = venta
+    units: float  # positive = aportación/compra, negative = venta; unused (0) for lump-sum holdings
     amount: float  # positive = dinero entrante, negative = dinero saliente
+    kind: str = "flow"  # "flow" (aportación/venta) or "adjustment" (ajuste de valor, lump-sum only)
     note: str | None = None
 
 
@@ -229,6 +230,7 @@ class InvestmentBase(BaseModel):
     name: str
     type: str  # one of models.INVESTMENT_TYPES
     isin: str | None = None
+    account: str | None = None  # Category.name of the Cuenta (type='inversion') this holding sits in
     target_weight: float = 0
     ft_symbol: str | None = None  # FT tearsheet "s=" param, e.g. "LU1234567890:EUR"
     active: bool = True
@@ -292,4 +294,22 @@ class PortfolioHistoryPoint(BaseModel):
     date: str
     total_invertido: float
     valor_actual: float
+
+
+class AccountCheckItem(BaseModel):
+    account: str
+    net_moved: float
+    contributed: float
+    difference: float
+
+
+class PendingAllocation(BaseModel):
+    investment_id: int
+    amount: float  # positive = aportación a esa holding
+    price: float | None = None  # required for fund-style holdings; ignored for lump-sum (seguros)
+
+
+class AssignPendingRequest(BaseModel):
+    date: date_type
+    allocations: list[PendingAllocation]
 

@@ -209,7 +209,7 @@ def seed_goals(db):
 def seed_investments(db):
     holdings = [
         # name, type, isin, target_weight, current_price, [(months_ago, units, price_paid), ...]
-        ("MSCI World Indexado", "fondo_indexado", "IE00B4L5Y983", 50, 28.40,
+        ("MSCI World Indexado", "fondo_inversion", "IE00B4L5Y983", 50, 28.40,
          [(18, 40, 22.10), (12, 30, 24.80), (6, 30, 26.50), (1, 20, 27.90)]),
         ("Fondo Mixto Conservador", "fondo_inversion", "ES0112345678", 20, 11.05,
          [(10, 200, 10.20), (4, 150, 10.70)]),

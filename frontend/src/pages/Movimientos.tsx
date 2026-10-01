@@ -8,10 +8,9 @@ import GroupModal from '../components/GroupModal'
 import CsvPreviewModal from '../components/CsvPreviewModal'
 import AccountBar from '../components/AccountBar'
 import Money from '../components/Money'
-import { EyeIcon, EyeOffIcon } from '../components/Icons'
 import { toCsv, parseCsv } from '../csv'
 import { isOrigin, isDestination } from '../categoryTypes'
-import { useHideAmounts, toggleHideAmounts } from '../hideAmounts'
+import { useHideAmounts } from '../hideAmounts'
 import PeriodSelector from '../components/PeriodSelector'
 
 const CSV_COLUMNS = ['date', 'concept', 'amount', 'status', 'origin', 'destination'] as const
@@ -378,20 +377,7 @@ export default function Movimientos() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-5 flex shrink-0 items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleHideAmounts}
-            className="btn"
-            aria-label={hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-            title={hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-          >
-            {hideAmounts ? <EyeOffIcon /> : <EyeIcon />}
-            {hideAmounts ? 'Mostrar importes' : 'Ocultar importes'}
-          </button>
-        </div>
-      </div>
+      <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Movimientos</h1>
 
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
 

@@ -12,6 +12,55 @@ export interface DonutItem {
   icon?: string // lucide name; omit for items with no category (e.g. account types)
   badge?: string // small annotation next to the label (e.g. "pasivo")
   targetPercent?: number
+  group?: { key: string; label: string; icon?: string; color: string }
+}
+
+interface LegendRow {
+  key: string
+  label: string
+  icon?: string
+  color: string
+  amount: number
+  targetPercent?: number
+  badge?: string
+  ungroupedItemKey?: string
+}
+
+function buildLegendRows(items: DonutItem[]): LegendRow[] {
+  if (!items.some((it) => it.group)) {
+    return items
+      .map((it) => ({
+        key: it.key,
+        ungroupedItemKey: it.key,
+        label: it.label,
+        icon: it.icon,
+        color: it.color,
+        amount: it.amount,
+        targetPercent: it.targetPercent,
+        badge: it.badge,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+  }
+  const rows = new Map<string, LegendRow>()
+  for (const it of items) {
+    const g = it.group
+    const key = g?.key ?? it.key
+    const existing = rows.get(key)
+    if (existing) {
+      existing.amount += it.amount
+      if (it.targetPercent !== undefined) existing.targetPercent = (existing.targetPercent ?? 0) + it.targetPercent
+    } else {
+      rows.set(key, {
+        key,
+        label: g?.label ?? it.label,
+        icon: g?.icon ?? it.icon,
+        color: g?.color ?? it.color,
+        amount: it.amount,
+        targetPercent: it.targetPercent,
+      })
+    }
+  }
+  return [...rows.values()].sort((a, b) => b.amount - a.amount)
 }
 
 const RADIAN = Math.PI / 180
@@ -107,40 +156,41 @@ export default function DonutBreakdown({
                 style={{ left: hover.x, top: hover.y }}
               >
                 <div className="font-medium text-fg">{hover.item.label}</div>
-                <div className={`text-muted ${hideAmounts ? 'select-none blur-sm' : ''}`}>
+                <div className={`flex items-center gap-2 text-muted ${hideAmounts ? 'select-none blur-sm' : ''}`}>
                   <Money value={hover.item.amount} />
+                  <span>{total > 0 ? Math.round((hover.item.amount / total) * 100) : 0}%</span>
+                  {hover.item.targetPercent !== undefined && <span>obj. {hover.item.targetPercent.toFixed(0)}%</span>}
                 </div>
               </div>
             )}
           </div>
 
           <div className={`min-w-0 space-y-2.5 overflow-y-auto ${legendBelow ? 'w-full' : 'flex-1'}`}>
-            {items.map((it) => (
+            {buildLegendRows(items).map((row) => (
               <button
-                key={it.key}
+                key={row.key}
                 type="button"
-                onClick={() => onItemClick?.(it.key)}
-                disabled={!onItemClick}
-                className={`flex w-full items-center gap-2 text-left text-sm ${onItemClick ? 'transition hover:opacity-70' : ''}`}
+                onClick={() => row.ungroupedItemKey && onItemClick?.(row.ungroupedItemKey)}
+                disabled={!onItemClick || !row.ungroupedItemKey}
+                className={`flex w-full items-center gap-2 text-left text-sm ${onItemClick && row.ungroupedItemKey ? 'transition hover:opacity-70' : ''}`}
               >
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: it.color }} />
-                {it.icon && (
-                  <span className="shrink-0" style={{ color: it.color }}>
-                    <CategoryIcon name={it.icon} size={14} />
+                {row.icon && (
+                  <span className="shrink-0" style={{ color: row.color }}>
+                    <CategoryIcon name={row.icon} size={14} />
                   </span>
                 )}
                 <span className="min-w-0 flex-1 truncate text-fg">
-                  {it.label}
-                  {it.badge && <span className="ml-1.5 text-xs font-normal text-faint">· {it.badge}</span>}
+                  {row.label}
+                  {row.badge && <span className="ml-1.5 text-xs font-normal text-faint">· {row.badge}</span>}
                 </span>
                 <span className={`num shrink-0 text-fg ${blur}`}>
-                  <Money value={it.amount} />
+                  <Money value={row.amount} />
                 </span>
                 <span className="w-10 shrink-0 text-right text-xs text-faint">
-                  {total > 0 ? Math.round((it.amount / total) * 100) : 0}%
+                  {total > 0 ? Math.round((row.amount / total) * 100) : 0}%
                 </span>
-                {it.targetPercent !== undefined && (
-                  <span className="w-16 shrink-0 text-right text-xs text-faint">obj. {it.targetPercent.toFixed(0)}%</span>
+                {row.targetPercent !== undefined && (
+                  <span className="w-16 shrink-0 text-right text-xs text-faint">obj. {row.targetPercent.toFixed(0)}%</span>
                 )}
               </button>
             ))}
