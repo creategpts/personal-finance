@@ -120,4 +120,4 @@ if DIST_DIR.is_dir():
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
-        return FileResponse(DIST_DIR / "index.html")
+        return FileResponse(DIST_DIR / "index.html", headers={"Cache-Control": "no-store"})
