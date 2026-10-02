@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Investment, type InvestmentTransactionInput } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import Money from '../components/Money'
@@ -149,23 +150,14 @@ export default function InvestmentLedger() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const hideAmounts = useHideAmounts()
-  const [investment, setInvestment] = useState<Investment | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const queryClient = useQueryClient()
+  const { data: investments } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
+  const investment: Investment | null = investments?.find((i) => i.id === Number(id)) ?? null
+  const notFound = investments !== undefined && !investment
 
   async function refresh() {
-    const list = await api.investments.list()
-    const found = list.find((i) => i.id === Number(id)) ?? null
-    if (!found) {
-      setNotFound(true)
-      return
-    }
-    setInvestment(found)
+    await queryClient.invalidateQueries({ queryKey: ['investments'] })
   }
-
-  useEffect(() => {
-    refresh()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
 
   async function handleAddTransaction(data: InvestmentTransactionInput) {
     if (!investment) return

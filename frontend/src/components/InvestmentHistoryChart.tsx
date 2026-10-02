@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type InvestmentType, type PortfolioHistoryPoint } from '../api'
+import { api, type InvestmentType } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 
 const AXIS_COLOR = '#a3a3a3'
@@ -19,11 +20,10 @@ const FILTERS: { label: string; type?: InvestmentType }[] = [
 
 export default function InvestmentHistoryChart({ hideAmounts }: { hideAmounts: boolean }) {
   const [filter, setFilter] = useState<InvestmentType | undefined>(undefined)
-  const [points, setPoints] = useState<PortfolioHistoryPoint[]>([])
-
-  useEffect(() => {
-    api.investments.history(filter).then(setPoints)
-  }, [filter])
+  const { data: points = [] } = useQuery({
+    queryKey: ['investments-history', filter],
+    queryFn: () => api.investments.history(filter),
+  })
 
   const data = points.map((p) => ({ label: dateLabel(p.date), invertido: p.total_invertido, actual: p.valor_actual }))
 

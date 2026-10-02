@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, type CategoryBreakdownItem } from '../api'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../api'
 import PeriodSelector from './PeriodSelector'
 import DonutBreakdown, { type DonutItem } from './DonutBreakdown'
 
@@ -9,12 +10,11 @@ const INFO_INCOME = 'Ingreso por categoría en el periodo. Solo cuenta si la cat
 export default function AnalisisIngreso({ hideAmounts }: { hideAmounts: boolean }) {
   const navigate = useNavigate()
   const [range, setRange] = useState({ from: '', to: '' })
-  const [incomeItems, setIncomeItems] = useState<CategoryBreakdownItem[]>([])
-
-  useEffect(() => {
-    if (!range.from || !range.to) return
-    api.dashboard.breakdown(range.from, range.to, 'income').then(setIncomeItems)
-  }, [range])
+  const { data: incomeItems = [] } = useQuery({
+    queryKey: ['dashboard-breakdown', range.from, range.to, 'income'],
+    queryFn: () => api.dashboard.breakdown(range.from, range.to, 'income'),
+    enabled: !!range.from && !!range.to,
+  })
 
   function goToCategory(category: string) {
     if (!range.from || !range.to) return

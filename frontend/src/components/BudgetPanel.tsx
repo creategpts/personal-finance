@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Category } from '../api'
 
 function prevMonth(year: number, month: number) {
@@ -14,30 +15,31 @@ interface Props {
 
 // Always-visible budget editor (left of the chart). Rows sorted by saved budget, desc.
 export default function BudgetPanel({ year, month, categories, onSaved }: Props) {
+  const queryClient = useQueryClient()
+  const { data: budgetItems, isLoading: loading } = useQuery({
+    queryKey: ['budgets', year, month],
+    queryFn: () => api.budgets.get(year, month),
+  })
   const [amounts, setAmounts] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState<Record<string, number>>({}) // sort key; set on load only (no reorder while typing)
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    setLoading(true)
-    api.budgets.get(year, month).then((items) => {
-      const strs: Record<string, string> = {}
-      const nums: Record<string, number> = {}
-      for (const it of items) {
-        strs[it.category] = String(it.amount)
-        nums[it.category] = it.amount
-      }
-      setAmounts(strs)
-      setSaved(nums)
-      setLoading(false)
-    })
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-    }
   }, [year, month])
+
+  useEffect(() => {
+    if (!budgetItems) return
+    const strs: Record<string, string> = {}
+    const nums: Record<string, number> = {}
+    for (const it of budgetItems) {
+      strs[it.category] = String(it.amount)
+      nums[it.category] = it.amount
+    }
+    setAmounts(strs)
+    setSaved(nums)
+  }, [budgetItems])
 
   async function doSave(next: Record<string, string>) {
     setSaving(true)
@@ -48,6 +50,7 @@ export default function BudgetPanel({ year, month, categories, onSaved }: Props)
       await api.budgets.set(year, month, items)
       // refresh sort key so the list re-orders mayor→menor by saved budget
       setSaved(Object.fromEntries(items.map((it) => [it.category, it.amount])))
+      queryClient.invalidateQueries({ queryKey: ['budgets', year, month] })
       onSaved()
     } finally {
       setSaving(false)

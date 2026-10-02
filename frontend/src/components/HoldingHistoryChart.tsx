@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type PortfolioHistoryPoint } from '../api'
+import { api } from '../api'
 
 const AXIS_COLOR = '#a3a3a3'
 const eur = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -20,11 +20,10 @@ export default function HoldingHistoryChart({
   transactionCount: number
   hideAmounts: boolean
 }) {
-  const [points, setPoints] = useState<PortfolioHistoryPoint[]>([])
-
-  useEffect(() => {
-    api.investments.historyFor(investmentId).then(setPoints)
-  }, [investmentId, transactionCount])
+  const { data: points = [] } = useQuery({
+    queryKey: ['investments-history-for', investmentId, transactionCount],
+    queryFn: () => api.investments.historyFor(investmentId),
+  })
 
   const data = points.map((p) => ({ label: dateLabel(p.date), invertido: p.total_invertido, actual: p.valor_actual }))
 

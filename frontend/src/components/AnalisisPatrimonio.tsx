@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type AccountSnapshot, type Category, type NetWorthPoint } from '../api'
+import { api } from '../api'
 import { isAccount } from '../categoryTypes'
 import DonutBreakdown, { type DonutItem } from './DonutBreakdown'
 
@@ -30,18 +31,19 @@ const INFO_TODAY = 'Saldo actual de tus cuentas de Ahorro e Inversión. Solo cue
 
 export default function AnalisisPatrimonio({ hideAmounts }: { hideAmounts: boolean }) {
   const [months, setMonths] = useState(12)
-  const [points, setPoints] = useState<NetWorthPoint[]>([])
-  const [snapshot, setSnapshot] = useState<AccountSnapshot | null>(null)
-  const [accountCategories, setAccountCategories] = useState<Category[]>([])
-
-  useEffect(() => {
-    api.dashboard.netWorth(months).then(setPoints)
-  }, [months])
-
-  useEffect(() => {
-    api.accountValues.latest().then(setSnapshot)
-    api.categories.list().then((cats) => setAccountCategories(cats.filter((c) => isAccount(c.type) && c.include_in_total)))
-  }, [])
+  const { data: points = [] } = useQuery({
+    queryKey: ['dashboard-net-worth', months],
+    queryFn: () => api.dashboard.netWorth(months),
+  })
+  const { data: snapshot = null } = useQuery({
+    queryKey: ['account-values', 'latest'],
+    queryFn: () => api.accountValues.latest(),
+  })
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.categories.list(),
+  })
+  const accountCategories = categories.filter((c) => isAccount(c.type) && c.include_in_total)
 
   const data = useMemo(
     () =>

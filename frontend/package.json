@@ -12,6 +12,7 @@
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.104.0",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

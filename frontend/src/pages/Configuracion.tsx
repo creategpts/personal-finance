@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Category, type CategoryType } from '../api'
 import { isAccount, isOrigin, isDestination } from '../categoryTypes'
 import { ACCOUNT_TYPES, typeLabel as typeLabelOf } from '../accountTypes'
@@ -548,17 +549,15 @@ function CuentasSection({ categories, onChanged }: { categories: Category[]; onC
 }
 
 function BackupSection() {
-  const [dir, setDir] = useState('')
-  const [files, setFiles] = useState<string[]>([])
+  const queryClient = useQueryClient()
+  const { data: backups } = useQuery({ queryKey: ['backups'], queryFn: () => api.backup.list() })
+  const dir = backups?.dir ?? ''
+  const files = backups?.files ?? []
   const [busy, setBusy] = useState(false)
 
   function load() {
-    api.backup.list().then((r) => {
-      setDir(r.dir)
-      setFiles(r.files)
-    })
+    queryClient.invalidateQueries({ queryKey: ['backups'] })
   }
-  useEffect(load, [])
 
   async function create() {
     setBusy(true)
@@ -797,14 +796,13 @@ function GeneralSection({ categories }: { categories: Category[] }) {
 }
 
 export default function Configuracion() {
-  const [categories, setCategories] = useState<Category[]>([])
+  const queryClient = useQueryClient()
+  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
   const [tab, setTab] = useState<'general' | 'cuentas' | 'categorias' | 'backup'>('general')
 
   function refresh() {
-    api.categories.list().then(setCategories)
+    queryClient.invalidateQueries({ queryKey: ['categories'] })
   }
-
-  useEffect(refresh, [])
 
   return (
     <div className="flex h-full flex-col">

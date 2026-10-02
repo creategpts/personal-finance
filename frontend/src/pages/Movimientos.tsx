@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api, type Category, type KpiName, type Movement, type MovementInput, type MovementStatus } from '../api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api, type KpiName, type Movement, type MovementInput, type MovementStatus } from '../api'
 import { buildRows } from '../movementGroups'
 import MovementModal from '../components/MovementModal'
 import BulkEditModal, { type BulkOverrides } from '../components/BulkEditModal'
@@ -57,12 +58,18 @@ export default function Movimientos() {
   const kpi = searchParams.get('kpi') as KpiName | null
   const hideAmounts = useHideAmounts()
 
-  const [movements, setMovements] = useState<Movement[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const queryClient = useQueryClient()
+  const { data: movements = [] } = useQuery({
+    queryKey: ['movements', kpi],
+    queryFn: () => api.movements.list({ ...(kpi && { kpi }) }),
+  })
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.categories.list(),
+  })
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [editing, setEditing] = useState<Movement | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [accountsKey, setAccountsKey] = useState(0) // bump to remount AccountBar -> refetch balances
   const [busy, setBusy] = useState(false) // CSV export/import in progress
   const [menuOpen, setMenuOpen] = useState(false) // ⋯ menu
   const [selected, setSelected] = useState<Set<number>>(new Set()) // row selection (bulk actions)
@@ -90,19 +97,10 @@ export default function Movimientos() {
     setFDestination(searchParams.get('destination') ?? 'All')
   }, [searchParams])
 
-  async function refresh(bumpAccounts = true) {
-    if (bumpAccounts) setAccountsKey((k) => k + 1)
-    const [m, c] = await Promise.all([
-      api.movements.list({ ...(kpi && { kpi }) }),
-      api.categories.list(),
-    ])
-    setMovements(m)
-    setCategories(c)
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['movements'] })
+    queryClient.invalidateQueries({ queryKey: ['account-values', 'latest'] })
   }
-
-  useEffect(() => {
-    refresh(false)
-  }, [kpi])
 
   const origins = categories.filter((c) => isOrigin(c.type))
   const destinations = categories.filter((c) => isDestination(c.type))
@@ -414,7 +412,7 @@ export default function Movimientos() {
 
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
 
-      <AccountBar key={accountsKey} />
+      <AccountBar />
 
       <div className="mb-3 flex shrink-0 flex-wrap items-end gap-3">
         <div className="text-xs font-medium text-muted">

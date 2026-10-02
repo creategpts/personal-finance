@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { api, type Category, type Goal, type GoalCreateInput, type GoalProgress, type GoalTargetInput, type GoalType } from '../api'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api, type Goal, type GoalCreateInput, type GoalProgress, type GoalTargetInput, type GoalType } from '../api'
 import GoalModal from './GoalModal'
 import Money from './Money'
 
@@ -139,23 +140,24 @@ function GoalCard({ goal, progress, onEdit }: { goal: Goal; progress?: GoalProgr
 }
 
 export default function GoalsPanel() {
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [progress, setProgress] = useState<Record<number, GoalProgress>>({})
-  const [accounts, setAccounts] = useState<Category[]>([])
+  const queryClient = useQueryClient()
+  const { data: goals = [] } = useQuery({ queryKey: ['goals'], queryFn: () => api.goals.list() })
+  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
+  const accounts = categories.filter((c) => ['ahorro', 'inversion'].includes(c.type))
+  const goalIds = goals.map((g) => g.id)
+  const { data: progressList = [] } = useQuery({
+    queryKey: ['goals-progress', goalIds],
+    queryFn: () => Promise.all(goalIds.map((id) => api.goals.progress(id))),
+    enabled: goalIds.length > 0,
+  })
+  const progress: Record<number, GoalProgress> = Object.fromEntries(progressList.map((p) => [p.goal_id, p]))
   const [editing, setEditing] = useState<Goal | null>(null)
   const [showModal, setShowModal] = useState(false)
 
-  async function refresh() {
-    const [gs, cats] = await Promise.all([api.goals.list(), api.categories.list()])
-    setAccounts(cats.filter((c) => ['ahorro', 'inversion'].includes(c.type)))
-    setGoals(gs)
-    const progs = await Promise.all(gs.map((g) => api.goals.progress(g.id)))
-    setProgress(Object.fromEntries(progs.map((p) => [p.goal_id, p])))
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['goals'] })
+    queryClient.invalidateQueries({ queryKey: ['goals-progress'] })
   }
-
-  useEffect(() => {
-    refresh()
-  }, [])
 
   async function handleCreate(data: GoalCreateInput) {
     await api.goals.create(data)

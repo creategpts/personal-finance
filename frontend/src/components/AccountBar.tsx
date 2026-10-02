@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, type AccountSnapshot, type Category } from '../api'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../api'
 import { isAccount } from '../categoryTypes'
 import StatTile from './StatTile'
 import { useHideAmounts } from '../hideAmounts'
@@ -7,15 +7,15 @@ import { useHideAmounts } from '../hideAmounts'
 // Account balances bar, same as the Panel one. Self-fetching so any page can drop it in.
 export default function AccountBar() {
   const hideAmounts = useHideAmounts()
-  const [snapshot, setSnapshot] = useState<AccountSnapshot | null>(null)
-  const [accountCategories, setAccountCategories] = useState<Category[]>([])
-
-  useEffect(() => {
-    api.accountValues.latest().then(setSnapshot)
-    api.categories
-      .list()
-      .then((cats) => setAccountCategories(cats.filter((c) => isAccount(c.type) && c.visible)))
-  }, [])
+  const { data: snapshot = null } = useQuery({
+    queryKey: ['account-values', 'latest'],
+    queryFn: () => api.accountValues.latest(),
+  })
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.categories.list(),
+  })
+  const accountCategories = categories.filter((c) => isAccount(c.type) && c.visible)
 
   const accountRows = accountCategories
     .map((c) => ({

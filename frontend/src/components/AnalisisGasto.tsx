@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type CategoryBreakdownItem, type MonthlyKpiPoint, type TopDestinationItem } from '../api'
+import { api, type TopDestinationItem } from '../api'
 import PeriodSelector from './PeriodSelector'
 import DonutBreakdown, { type DonutItem } from './DonutBreakdown'
 
@@ -70,21 +71,23 @@ function MonthlyTooltip({ active, payload, label }: { active?: boolean; payload?
 export default function AnalisisGasto({ hideAmounts }: { hideAmounts: boolean }) {
   const navigate = useNavigate()
   const [range, setRange] = useState({ from: '', to: '' })
-  const [expenseItems, setExpenseItems] = useState<CategoryBreakdownItem[]>([])
-  const [topDestinations, setTopDestinations] = useState<TopDestinationItem[]>([])
+  const rangeReady = !!range.from && !!range.to
+  const { data: expenseItems = [] } = useQuery({
+    queryKey: ['dashboard-breakdown', range.from, range.to, 'expense'],
+    queryFn: () => api.dashboard.breakdown(range.from, range.to, 'expense'),
+    enabled: rangeReady,
+  })
+  const { data: topDestinations = [] } = useQuery({
+    queryKey: ['dashboard-top-destinations', range.from, range.to],
+    queryFn: () => api.dashboard.topDestinations(range.from, range.to, 10),
+    enabled: rangeReady,
+  })
 
   const [months, setMonths] = useState(12)
-  const [kpi, setKpi] = useState<MonthlyKpiPoint[]>([])
-
-  useEffect(() => {
-    if (!range.from || !range.to) return
-    api.dashboard.breakdown(range.from, range.to, 'expense').then(setExpenseItems)
-    api.dashboard.topDestinations(range.from, range.to, 10).then(setTopDestinations)
-  }, [range])
-
-  useEffect(() => {
-    api.dashboard.monthlySeries(months).then(setKpi)
-  }, [months])
+  const { data: kpi = [] } = useQuery({
+    queryKey: ['dashboard-monthly-series', months],
+    queryFn: () => api.dashboard.monthlySeries(months),
+  })
 
   function goToCategory(field: 'origin' | 'destination', category: string) {
     if (!range.from || !range.to) return

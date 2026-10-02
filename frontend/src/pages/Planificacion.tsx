@@ -1,5 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
-import { api, type Category, type RecurringExpense, type RecurringExpenseInput } from '../api'
+import { Fragment, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api, type RecurringExpense, type RecurringExpenseInput } from '../api'
 import RecurringModal from '../components/RecurringModal'
 import GoalsPanel from '../components/GoalsPanel'
 import Money from '../components/Money'
@@ -254,21 +255,16 @@ function RecurringTable({
 
 export default function Planificacion() {
   const hideAmounts = useHideAmounts()
-  const [plans, setPlans] = useState<RecurringExpense[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const queryClient = useQueryClient()
+  const { data: plans = [] } = useQuery({ queryKey: ['recurring'], queryFn: () => api.recurring.list() })
+  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
   const [editing, setEditing] = useState<RecurringExpense | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [newKind, setNewKind] = useState<'gasto' | 'ingreso'>('gasto')
 
-  async function refresh() {
-    const [p, c] = await Promise.all([api.recurring.list(), api.categories.list()])
-    setPlans(p)
-    setCategories(c)
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['recurring'] })
   }
-
-  useEffect(() => {
-    refresh()
-  }, [])
 
   const typeOf = useMemo(() => new Map(categories.map((c) => [c.name, c.type])), [categories])
   // an income-recurring plan has an income category as origin; everything else is

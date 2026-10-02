@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Bar,
   BarChart,
@@ -12,10 +13,7 @@ import {
 } from 'recharts'
 import {
   api,
-  type AccountSnapshot,
   type BudgetVsActualItem,
-  type Category,
-  type DashboardSummary,
   type KpiName,
 } from '../api'
 import { isAccount } from '../categoryTypes'
@@ -86,36 +84,41 @@ export default function Panel() {
   const navigate = useNavigate()
   const hideAmounts = useHideAmounts()
   const { user_name } = useSettings()
-  const [snapshot, setSnapshot] = useState<AccountSnapshot | null>(null)
   const [range, setRange] = useState({ from: '', to: '' })
-  const [summary, setSummary] = useState<DashboardSummary | null>(null)
-  const [items, setItems] = useState<BudgetVsActualItem[]>([])
-  const [expenseCategories, setExpenseCategories] = useState<Category[]>([])
-  const [accountCategories, setAccountCategories] = useState<Category[]>([])
+  const queryClient = useQueryClient()
 
-  function refreshAccounts() {
-    api.accountValues.latest().then(setSnapshot)
-  }
+  const { data: snapshot = null } = useQuery({
+    queryKey: ['account-values', 'latest'],
+    queryFn: () => api.accountValues.latest(),
+  })
 
-  useEffect(() => {
-    refreshAccounts()
-    api.categories.list().then((cats) => {
-      // top-level only — subcategory spend rolls up into its parent's budget (backend does the same)
-      setExpenseCategories(cats.filter((c) => c.type === 'expense' && c.parent_id === null))
-      // every account of that type, regardless of "En patrimonio total" — these tiles
-      // show what you actually have by type; that flag only curates the headline
-      // "Valor total de activos" above, so the two can legitimately disagree.
-      setAccountCategories(cats.filter((c) => isAccount(c.type)))
-    })
-  }, [])
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.categories.list(),
+  })
+  // top-level only — subcategory spend rolls up into its parent's budget (backend does the same)
+  const expenseCategories = categories.filter((c) => c.type === 'expense' && c.parent_id === null)
+  // every account of that type, regardless of "En patrimonio total" — these tiles
+  // show what you actually have by type; that flag only curates the headline
+  // "Valor total de activos" above, so the two can legitimately disagree.
+  const accountCategories = categories.filter((c) => isAccount(c.type))
+
+  const dashboardReady = !!range.from && !!range.to
+  const { data: summary = null } = useQuery({
+    queryKey: ['dashboard-summary', range.from, range.to],
+    queryFn: () => api.dashboard.summary(range.from, range.to),
+    enabled: dashboardReady,
+  })
+  const { data: items = [] } = useQuery({
+    queryKey: ['dashboard-budget-vs-actual', range.from, range.to],
+    queryFn: () => api.dashboard.budgetVsActual(range.from, range.to),
+    enabled: dashboardReady,
+  })
 
   function refreshDashboard() {
-    if (!range.from || !range.to) return
-    api.dashboard.summary(range.from, range.to).then(setSummary)
-    api.dashboard.budgetVsActual(range.from, range.to).then(setItems)
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard-budget-vs-actual'] })
   }
-
-  useEffect(refreshDashboard, [range])
 
   // budgets/account values are per calendar month — manage whichever month the selected period ends in
   const [targetYear, targetMonth] = range.to ? range.to.split('-').map(Number) : [0, 0]
