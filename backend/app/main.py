@@ -120,4 +120,9 @@ if DIST_DIR.is_dir():
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
+        # root-level static files (public/ at build time: favicon, manifest, icons/)
+        # land next to index.html, not under /assets — serve them directly if present.
+        candidate = (DIST_DIR / full_path).resolve()
+        if full_path and candidate.is_file() and DIST_DIR.resolve() in candidate.parents:
+            return FileResponse(candidate)
         return FileResponse(DIST_DIR / "index.html", headers={"Cache-Control": "no-store"})

@@ -12,7 +12,7 @@ import { useHideAmounts } from '../hideAmounts'
 export default function Inversion() {
   const hideAmounts = useHideAmounts()
   const queryClient = useQueryClient()
-  const [showPlan, setShowPlan] = useState(true)
+  const [showPlan, setShowPlan] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'detalle' ? 'detalle' : 'dashboard'
   const setTab = (next: 'dashboard' | 'detalle') => setSearchParams(next === 'dashboard' ? {} : { tab: next })
@@ -99,6 +99,9 @@ export default function Inversion() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowPlan(true)} className="btn">
+            Plan de inversión
+          </button>
           {tab === 'detalle' && (
             <>
               <button onClick={handleRefreshAll} disabled={refreshingAll} className="btn">
