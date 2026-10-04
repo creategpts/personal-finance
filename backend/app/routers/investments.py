@@ -119,6 +119,24 @@ def add_transaction(investment_id: int, payload: schemas.InvestmentTransactionCr
     return _serialize(inv)
 
 
+@router.put("/{investment_id}/transactions/{transaction_id}", response_model=schemas.InvestmentOut)
+def update_transaction(
+    investment_id: int, transaction_id: int, payload: schemas.InvestmentTransactionCreate, db: Session = Depends(get_db)
+):
+    inv = _get(db, investment_id)
+    tx = db.get(models.InvestmentTransaction, transaction_id)
+    if not tx or tx.investment_id != investment_id:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    tx.date = payload.date
+    tx.units = payload.units
+    tx.amount = payload.amount
+    tx.kind = payload.kind
+    tx.note = payload.note
+    db.commit()
+    db.refresh(inv)
+    return _serialize(inv)
+
+
 @router.delete("/{investment_id}/transactions/{transaction_id}", response_model=schemas.InvestmentOut)
 def delete_transaction(investment_id: int, transaction_id: int, db: Session = Depends(get_db)):
     inv = _get(db, investment_id)

@@ -5,7 +5,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import Date, DateTime
+from sqlalchemy import Date, DateTime, text
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -128,6 +128,21 @@ def restore_backup(payload: dict, db: Session = Depends(get_db)):
                     row[c] = datetime.fromisoformat(row[c])
         db.execute(t.insert(), rows)
     db.commit()
+    # restore inserts explicit ids (from the dump), which doesn't advance Postgres's
+    # own serial sequence (SQLite's rowid needs no such fixup) — without this, the
+    # next plain insert collides with an id the restore already used.
+    if db.bind.dialect.name == "postgresql":
+        for t in tables:
+            pk_cols = [c.name for c in t.primary_key.columns]
+            if len(pk_cols) == 1:
+                db.execute(
+                    text(
+                        f"SELECT setval(pg_get_serial_sequence('{t.name}', '{pk_cols[0]}'), "
+                        f"COALESCE((SELECT MAX({pk_cols[0]}) FROM {t.name}), 1), "
+                        f"(SELECT MAX({pk_cols[0]}) FROM {t.name}) IS NOT NULL)"
+                    )
+                )
+        db.commit()
     # a pre-refactor backup stores accounts with the old AccountType.key values
     # ('saving'/'investment') instead of the current type ('ahorro'/'inversion').
     # Same one-time rename as the startup migration in main.py.

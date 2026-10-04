@@ -416,6 +416,8 @@ export const api = {
     remove: (id: number) => request<void>(`/investments/${id}`, { method: 'DELETE' }),
     addTransaction: (id: number, data: InvestmentTransactionInput) =>
       request<Investment>(`/investments/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    updateTransaction: (id: number, transactionId: number, data: InvestmentTransactionInput) =>
+      request<Investment>(`/investments/${id}/transactions/${transactionId}`, { method: 'PUT', body: JSON.stringify(data) }),
     removeTransaction: (id: number, transactionId: number) =>
       request<Investment>(`/investments/${id}/transactions/${transactionId}`, { method: 'DELETE' }),
     refreshPrice: (id: number) =>

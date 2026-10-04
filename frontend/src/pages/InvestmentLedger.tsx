@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type Investment, type InvestmentTransactionInput } from '../api'
+import { api, type Investment, type InvestmentTransaction, type InvestmentTransactionInput } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import Money from '../components/Money'
 import { TrashIcon } from '../components/Icons'
 import HoldingHistoryChart from '../components/HoldingHistoryChart'
+import EditInvestmentTransactionModal from '../components/EditInvestmentTransactionModal'
 import { useHideAmounts } from '../hideAmounts'
 
-const today = () => new Date().toISOString().slice(0, 10)
-const parseDecimal = (s: string) => Math.abs(Number((s || '0').replace(/,/g, '.')))
+export const today = () => new Date().toISOString().slice(0, 10)
+export const parseDecimal = (s: string) => Math.abs(Number((s || '0').replace(/,/g, '.')))
 
 function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Promise<void> }) {
   const [kind, setKind] = useState<'buy' | 'sell'>('buy')
@@ -154,6 +155,7 @@ export default function InvestmentLedger() {
   const { data: investments } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const investment: Investment | null = investments?.find((i) => i.id === Number(id)) ?? null
   const notFound = investments !== undefined && !investment
+  const [editingTx, setEditingTx] = useState<InvestmentTransaction | null>(null)
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ['investments'] })
@@ -168,6 +170,13 @@ export default function InvestmentLedger() {
   async function handleRemoveTransaction(transactionId: number) {
     if (!investment) return
     await api.investments.removeTransaction(investment.id, transactionId)
+    await refresh()
+  }
+
+  async function handleUpdateTransaction(transactionId: number, data: InvestmentTransactionInput) {
+    if (!investment) return
+    await api.investments.updateTransaction(investment.id, transactionId, data)
+    setEditingTx(null)
     await refresh()
   }
 
@@ -234,7 +243,11 @@ export default function InvestmentLedger() {
         ) : (
           <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
             {sorted.map((tx) => (
-              <li key={tx.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2">
+              <li
+                key={tx.id}
+                onClick={() => setEditingTx(tx)}
+                className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2"
+              >
                 <span className="text-muted">
                   {tx.date} ·{' '}
                   {lumpSum
@@ -247,7 +260,14 @@ export default function InvestmentLedger() {
                   · <Money value={tx.amount} />
                   {tx.note ? ` · ${tx.note}` : ''}
                 </span>
-                <button type="button" onClick={() => handleRemoveTransaction(tx.id)} className="shrink-0 text-faint hover:text-red-600">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRemoveTransaction(tx.id)
+                  }}
+                  className="shrink-0 text-faint hover:text-red-600"
+                >
                   <TrashIcon />
                 </button>
               </li>
@@ -255,6 +275,19 @@ export default function InvestmentLedger() {
           </ul>
         )}
       </div>
+
+      {editingTx && (
+        <EditInvestmentTransactionModal
+          tx={editingTx}
+          lumpSum={lumpSum}
+          onClose={() => setEditingTx(null)}
+          onSave={(data) => handleUpdateTransaction(editingTx.id, data)}
+          onDelete={async () => {
+            await handleRemoveTransaction(editingTx.id)
+            setEditingTx(null)
+          }}
+        />
+      )}
     </div>
   )
 }

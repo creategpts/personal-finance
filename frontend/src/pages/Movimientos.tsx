@@ -421,11 +421,11 @@ export default function Movimientos() {
 
       <AccountBar />
 
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:justify-end">
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="btn inline-flex items-center gap-1.5"
+          className="btn inline-flex items-center gap-1.5 md:hidden"
         >
           <SlidersHorizontal size={16} />
           Filtros
@@ -471,29 +471,34 @@ export default function Movimientos() {
         </div>
       </div>
 
-      <div className={`mb-3 grid shrink-0 grid-cols-2 gap-3 rounded-xl border border-line bg-surface p-3 ${filtersOpen ? '' : 'hidden'}`}>
-        <div className="col-span-2">
-          <PeriodSelector
-            fullWidth
-            key={`${searchParams.get('from')}_${searchParams.get('to')}`}
-            initialFrom={searchParams.get('from') ?? undefined}
-            initialTo={searchParams.get('to') ?? undefined}
-            onChange={(from, to) => {
-              setFFrom(from)
-              setFTo(to)
-            }}
-          />
+      <div
+        className={`mb-3 grid shrink-0 grid-cols-2 gap-3 rounded-xl border border-line bg-surface p-3 md:flex md:flex-wrap md:items-end md:rounded-none md:border-0 md:bg-transparent md:p-0 ${filtersOpen ? '' : 'hidden md:flex'}`}
+      >
+        <div className="col-span-2 text-xs font-medium text-muted md:col-span-1">
+          Periodo
+          <div className="mt-0.5">
+            <PeriodSelector
+              fullWidth="mobile"
+              key={`${searchParams.get('from')}_${searchParams.get('to')}`}
+              initialFrom={searchParams.get('from') ?? undefined}
+              initialTo={searchParams.get('to') ?? undefined}
+              onChange={(from, to) => {
+                setFFrom(from)
+                setFTo(to)
+              }}
+            />
+          </div>
         </div>
 
         <div className="text-xs font-medium text-muted">
           Importe
-          <div className="mt-0.5 flex w-full items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 transition focus-within:border-faint focus-within:ring-4 focus-within:ring-fg/10">
+          <div className="mt-0.5 flex w-full items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 transition focus-within:border-faint focus-within:ring-4 focus-within:ring-fg/10 md:w-auto">
             <input
               type="number"
               step="0.01"
               placeholder="mín"
               aria-label="Importe mín"
-              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] md:w-16 md:flex-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={fMin}
               onChange={(e) => setFMin(e.target.value)}
             />
@@ -503,7 +508,7 @@ export default function Movimientos() {
               step="0.01"
               placeholder="máx"
               aria-label="Importe máx"
-              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] md:w-16 md:flex-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={fMax}
               onChange={(e) => setFMax(e.target.value)}
             />
@@ -513,7 +518,7 @@ export default function Movimientos() {
         <label className="text-xs font-medium text-muted">
           Estado
           <select
-            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10 md:w-auto"
             value={fStatus}
             onChange={(e) => setFStatus(e.target.value as MovementStatus | 'All')}
           >
@@ -526,7 +531,7 @@ export default function Movimientos() {
         <label className="text-xs font-medium text-muted">
           Origen
           <select
-            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10 md:w-auto"
             value={fOrigin}
             onChange={(e) => setFOrigin(e.target.value)}
           >
@@ -540,7 +545,7 @@ export default function Movimientos() {
         <label className="text-xs font-medium text-muted">
           Destino
           <select
-            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10 md:w-auto"
             value={fDestination}
             onChange={(e) => setFDestination(e.target.value)}
           >
@@ -552,7 +557,7 @@ export default function Movimientos() {
         </label>
 
         {kpi && (
-          <span className="col-span-2 inline-flex w-fit items-center gap-1.5 rounded-lg bg-surface2 px-3 py-1.5 text-sm text-muted">
+          <span className="col-span-2 inline-flex w-fit items-center gap-1.5 self-end rounded-lg bg-surface2 px-3 py-1.5 text-sm text-muted md:col-span-1">
             {KPI_LABELS[kpi]}
             <button
               type="button"
