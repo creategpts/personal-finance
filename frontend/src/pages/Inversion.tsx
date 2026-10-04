@@ -75,7 +75,7 @@ export default function Inversion() {
 
   return (
     <div>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Inversión</h1>
+      <h1 className="mb-5 hidden text-2xl font-semibold tracking-tight md:block">Inversión</h1>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex gap-0.5 rounded-lg border border-line bg-surface p-0.5">

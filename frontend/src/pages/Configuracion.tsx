@@ -128,8 +128,8 @@ function SimpleCategoryList({
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="card min-h-0 flex-1 overflow-auto">
+    <div className="flex flex-col md:min-h-0 md:flex-1">
+      <div className="card md:min-h-0 md:flex-1 md:overflow-auto">
         <table className="tbl hidden md:table">
           <thead className="sticky top-0 z-10">
             <tr>
@@ -805,7 +805,7 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col md:h-full">
       <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Configuración</h1>
 
       <div className="mb-5 inline-flex shrink-0 flex-wrap gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
@@ -827,13 +827,13 @@ export default function Configuracion() {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="md:min-h-0 md:flex-1">
         {tab === 'general' && <GeneralSection categories={categories} />}
 
         {tab === 'cuentas' && <CuentasSection categories={categories} onChanged={refresh} />}
 
         {tab === 'categorias' && (
-          <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
+          <div className="flex flex-col gap-4 md:h-full md:min-h-0 md:flex-row">
             <SimpleCategoryList
               title="Ingresos"
               columnLabel="Orígenes"

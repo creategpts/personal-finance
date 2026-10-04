@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, type TopDestinationItem } from '../api'
-import PeriodSelector from './PeriodSelector'
 import DonutBreakdown, { type DonutItem } from './DonutBreakdown'
 
 const GRID_COLOR = 'rgba(128,128,128,0.18)'
@@ -68,9 +67,8 @@ function MonthlyTooltip({ active, payload, label }: { active?: boolean; payload?
   )
 }
 
-export default function AnalisisGasto({ hideAmounts }: { hideAmounts: boolean }) {
+export default function AnalisisGasto({ hideAmounts, range }: { hideAmounts: boolean; range: { from: string; to: string } }) {
   const navigate = useNavigate()
-  const [range, setRange] = useState({ from: '', to: '' })
   const rangeReady = !!range.from && !!range.to
   const { data: expenseItems = [] } = useQuery({
     queryKey: ['dashboard-breakdown', range.from, range.to, 'expense'],
@@ -118,10 +116,6 @@ export default function AnalisisGasto({ hideAmounts }: { hideAmounts: boolean })
 
   return (
     <div>
-      <div className="mb-5">
-        <PeriodSelector onChange={(from, to) => setRange({ from, to })} />
-      </div>
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DonutBreakdown
           title="En qué se va el dinero"

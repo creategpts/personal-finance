@@ -107,7 +107,7 @@ export default function HoldingsTable({
                 </button>
               </div>
             </div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            <div className="mt-2 grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
               <div>
                 <div className="text-faint">Total {lumpSum ? 'aportado' : 'invertido'}</div>
                 <Money value={inv.stats.total_invertido} className={`num text-fg ${blur}`} />

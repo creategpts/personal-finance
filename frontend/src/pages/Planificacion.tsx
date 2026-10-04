@@ -303,7 +303,7 @@ export default function Planificacion() {
 
   return (
     <div>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Planificación</h1>
+      <h1 className="mb-5 hidden text-2xl font-semibold tracking-tight md:block">Planificación</h1>
 
       <GoalsPanel />
 

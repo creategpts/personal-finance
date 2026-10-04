@@ -13,11 +13,18 @@ import { toCsv, parseCsv } from '../csv'
 import { isOrigin, isDestination } from '../categoryTypes'
 import { useHideAmounts } from '../hideAmounts'
 import PeriodSelector from '../components/PeriodSelector'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 
 const CSV_COLUMNS = ['date', 'concept', 'amount', 'status', 'origin', 'destination'] as const
 
 // "2026-08-09" -> "09/08/2026" (no TZ shift)
 const formatDate = (iso: string) => iso.split('-').reverse().join('/')
+
+const MONTHS_SHORT_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const formatDateShort = (iso: string) => {
+  const [, m, d] = iso.split('-')
+  return `${d} ${MONTHS_SHORT_ABBR[Number(m) - 1]}.`
+}
 
 const KPI_LABELS: Record<KpiName, string> = {
   income: 'Ingresos',
@@ -72,6 +79,7 @@ export default function Movimientos() {
   const [showModal, setShowModal] = useState(false)
   const [busy, setBusy] = useState(false) // CSV export/import in progress
   const [menuOpen, setMenuOpen] = useState(false) // ⋯ menu
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set()) // row selection (bulk actions)
   const [bulkOpen, setBulkOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
@@ -384,8 +392,12 @@ export default function Movimientos() {
         className={`flex cursor-pointer items-start gap-3 px-4 py-3 active:bg-surface2 ${indented ? 'pl-8' : ''} ${selected.has(m.id) ? 'bg-surface2' : ''}`}
       >
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-medium text-fg">{m.concept}</span>
+          <span className="font-medium text-fg">{m.concept}</span>
+          <div className="num mt-0.5 text-xs text-muted">{formatDateShort(m.date)}</div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <Money value={m.amount} className={`num text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
             <span
               className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
                 m.status === 'Done' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
@@ -395,132 +407,33 @@ export default function Movimientos() {
               {m.status}
             </span>
           </div>
-          <div className="num mt-0.5 text-xs text-muted">{formatDate(m.date)}</div>
-          <div className="mt-0.5 truncate text-xs text-faint">{m.origin} → {m.destination}</div>
+          <div className="mt-0.5 text-xs text-faint">{m.origin} → {m.destination}</div>
         </div>
-        <Money value={m.amount} className={`num shrink-0 text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />
-        <span onClick={(e) => e.stopPropagation()}>
-          <Check checked={selected.has(m.id)} onChange={() => toggleOne(m.id)} label="Seleccionar fila" />
-        </span>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Movimientos</h1>
+    <div className="flex flex-col md:h-full">
+      <h1 className="mb-5 hidden shrink-0 text-2xl font-semibold tracking-tight md:block">Movimientos</h1>
 
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
 
       <AccountBar />
 
-      <div className="mb-3 flex shrink-0 flex-wrap items-end gap-3">
-        <div className="text-xs font-medium text-muted">
-          Periodo
-          <div className="mt-0.5">
-            <PeriodSelector
-              key={`${searchParams.get('from')}_${searchParams.get('to')}`}
-              initialFrom={searchParams.get('from') ?? undefined}
-              initialTo={searchParams.get('to') ?? undefined}
-              onChange={(from, to) => {
-                setFFrom(from)
-                setFTo(to)
-              }}
-            />
-          </div>
-        </div>
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="btn inline-flex items-center gap-1.5"
+        >
+          <SlidersHorizontal size={16} />
+          Filtros
+          {hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+          <ChevronDown size={16} className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-        <div className="text-xs font-medium text-muted">
-          Importe
-          <div className="mt-0.5 flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 transition focus-within:border-faint focus-within:ring-4 focus-within:ring-fg/10">
-            <input
-              type="number"
-              step="0.01"
-              placeholder="mín"
-              aria-label="Importe mín"
-              className="w-16 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              value={fMin}
-              onChange={(e) => setFMin(e.target.value)}
-            />
-            <span className="text-faint">–</span>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="máx"
-              aria-label="Importe máx"
-              className="w-16 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              value={fMax}
-              onChange={(e) => setFMax(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <label className="text-xs font-medium text-muted">
-          Estado
-          <select
-            className="mt-0.5 block rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
-            value={fStatus}
-            onChange={(e) => setFStatus(e.target.value as MovementStatus | 'All')}
-          >
-            <option value="All">Todos</option>
-            <option value="Plan">Plan</option>
-            <option value="Done">Done</option>
-          </select>
-        </label>
-
-        <label className="text-xs font-medium text-muted">
-          Origen
-          <select
-            className="mt-0.5 block rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
-            value={fOrigin}
-            onChange={(e) => setFOrigin(e.target.value)}
-          >
-            <option value="All">Todos</option>
-            {origins.map((c) => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="text-xs font-medium text-muted">
-          Destino
-          <select
-            className="mt-0.5 block rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
-            value={fDestination}
-            onChange={(e) => setFDestination(e.target.value)}
-          >
-            <option value="All">Todos</option>
-            {destinations.map((c) => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-        </label>
-
-        {kpi && (
-          <span className="inline-flex items-center gap-1.5 self-end rounded-lg bg-surface2 px-3 py-1.5 text-sm text-muted">
-            {KPI_LABELS[kpi]}
-            <button
-              type="button"
-              aria-label="Quitar filtro de tipo"
-              onClick={() => {
-                const p = new URLSearchParams(searchParams)
-                p.delete('kpi')
-                setSearchParams(p)
-              }}
-              className="text-faint hover:text-fg"
-            >
-              ✕
-            </button>
-          </span>
-        )}
-
-        {hasFilters && (
-          <button onClick={clearFilters} className="btn">
-            Limpiar
-          </button>
-        )}
-
-        <div className="relative ml-auto flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           <button
             onClick={() => {
               setEditing(null)
@@ -532,7 +445,7 @@ export default function Movimientos() {
           </button>
           <button
             onClick={() => setMenuOpen((o) => !o)}
-            className="btn px-2"
+            className="btn hidden px-2 md:inline-flex"
             aria-label="Más opciones"
             title="Más opciones"
           >
@@ -558,8 +471,113 @@ export default function Movimientos() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-        <div className="card min-h-0 flex-1 overflow-auto">
+      <div className={`mb-3 grid shrink-0 grid-cols-2 gap-3 rounded-xl border border-line bg-surface p-3 ${filtersOpen ? '' : 'hidden'}`}>
+        <div className="col-span-2">
+          <PeriodSelector
+            fullWidth
+            key={`${searchParams.get('from')}_${searchParams.get('to')}`}
+            initialFrom={searchParams.get('from') ?? undefined}
+            initialTo={searchParams.get('to') ?? undefined}
+            onChange={(from, to) => {
+              setFFrom(from)
+              setFTo(to)
+            }}
+          />
+        </div>
+
+        <div className="text-xs font-medium text-muted">
+          Importe
+          <div className="mt-0.5 flex w-full items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 transition focus-within:border-faint focus-within:ring-4 focus-within:ring-fg/10">
+            <input
+              type="number"
+              step="0.01"
+              placeholder="mín"
+              aria-label="Importe mín"
+              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              value={fMin}
+              onChange={(e) => setFMin(e.target.value)}
+            />
+            <span className="text-faint">–</span>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="máx"
+              aria-label="Importe máx"
+              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              value={fMax}
+              onChange={(e) => setFMax(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <label className="text-xs font-medium text-muted">
+          Estado
+          <select
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            value={fStatus}
+            onChange={(e) => setFStatus(e.target.value as MovementStatus | 'All')}
+          >
+            <option value="All">Todos</option>
+            <option value="Plan">Plan</option>
+            <option value="Done">Done</option>
+          </select>
+        </label>
+
+        <label className="text-xs font-medium text-muted">
+          Origen
+          <select
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            value={fOrigin}
+            onChange={(e) => setFOrigin(e.target.value)}
+          >
+            <option value="All">Todos</option>
+            {origins.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-xs font-medium text-muted">
+          Destino
+          <select
+            className="mt-0.5 block w-full rounded-lg border border-line px-2.5 py-1.5 text-sm text-fg outline-none transition focus:border-faint focus:ring-4 focus:ring-fg/10"
+            value={fDestination}
+            onChange={(e) => setFDestination(e.target.value)}
+          >
+            <option value="All">Todos</option>
+            {destinations.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+
+        {kpi && (
+          <span className="col-span-2 inline-flex w-fit items-center gap-1.5 rounded-lg bg-surface2 px-3 py-1.5 text-sm text-muted">
+            {KPI_LABELS[kpi]}
+            <button
+              type="button"
+              aria-label="Quitar filtro de tipo"
+              onClick={() => {
+                const p = new URLSearchParams(searchParams)
+                p.delete('kpi')
+                setSearchParams(p)
+              }}
+              className="text-faint hover:text-fg"
+            >
+              ✕
+            </button>
+          </span>
+        )}
+
+        {hasFilters && (
+          <button onClick={clearFilters} className="btn col-span-2 w-fit">
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
+        <div className="card md:min-h-0 md:flex-1 md:overflow-auto">
         <table className="tbl hidden md:table">
           <thead className="sticky top-0 z-10">
             <tr>
@@ -639,7 +657,7 @@ export default function Movimientos() {
                       <span className="ml-1.5 text-xs font-normal text-faint">· {row.members.length}</span>
                     </div>
                     <div className="num text-xs text-muted">
-                      {row.from === row.to ? formatDate(row.from) : `${formatDate(row.from)} – ${formatDate(row.to)}`}
+                      {row.from === row.to ? formatDateShort(row.from) : `${formatDateShort(row.from)} – ${formatDateShort(row.to)}`}
                     </div>
                   </div>
                   <Money value={row.total} className={`num shrink-0 text-sm font-medium text-fg ${hideAmounts ? 'select-none blur-sm' : ''}`} />

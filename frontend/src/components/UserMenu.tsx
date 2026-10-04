@@ -4,7 +4,7 @@ import ThemeToggle from './ThemeToggle'
 import HideAmountsToggle from './HideAmountsToggle'
 import { useSettings, initialsOf } from '../settings'
 
-export default function UserMenu({ openDown }: { openDown?: boolean }) {
+export default function UserMenu({ openDown, avatarOnly }: { openDown?: boolean; avatarOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const { user_name } = useSettings()
 
@@ -36,12 +36,12 @@ export default function UserMenu({ openDown }: { openDown?: boolean }) {
 
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition hover:bg-surface2"
+        className={`flex items-center gap-2.5 rounded-lg text-sm transition hover:bg-surface2 ${avatarOnly ? 'p-1' : 'w-full px-2 py-1.5'}`}
       >
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primaryfg">
           {initialsOf(user_name)}
         </span>
-        <span className="truncate font-medium text-fg">{user_name}</span>
+        {!avatarOnly && <span className="truncate font-medium text-fg">{user_name}</span>}
       </button>
     </div>
   )

@@ -35,15 +35,16 @@ interface Props {
   // component if the caller needs it to react to a later change.
   initialFrom?: string
   initialTo?: string
+  fullWidth?: boolean | 'mobile'
 }
 
 // borderless select/date that blends into its box (the box sets the height);
 // appearance-none drops the native dropdown caret — the box itself already looks clickable
 const bareSelect = 'cursor-pointer appearance-none border-0 bg-transparent text-sm font-medium text-fg focus:outline-none'
-const bareDate = 'cursor-pointer border-0 bg-transparent text-sm text-fg focus:outline-none'
+const bareDate = 'w-0 min-w-0 flex-1 cursor-pointer border-0 bg-transparent text-sm text-fg focus:outline-none'
 const arrowBtn = 'flex items-center justify-center text-muted transition-colors hover:text-fg disabled:opacity-30'
 
-export default function PeriodSelector({ onChange, initialFrom, initialTo }: Props) {
+export default function PeriodSelector({ onChange, initialFrom, initialTo, fullWidth }: Props) {
   const now = new Date()
   const currentYear = now.getFullYear()
   const years = Array.from({ length: 6 }, (_, i) => currentYear - 4 + i)
@@ -115,16 +116,20 @@ export default function PeriodSelector({ onChange, initialFrom, initialTo }: Pro
   }
 
   const stepDisabled = mode === 'range'
+  const mobileOnly = fullWidth === 'mobile'
+  const wFull = fullWidth ? `w-full ${mobileOnly ? 'md:w-auto' : ''}` : ''
+  const flexFull = fullWidth ? `flex-1 ${mobileOnly ? 'md:flex-none' : ''}` : ''
+  const flexFullCenter = fullWidth ? `flex-1 justify-center ${mobileOnly ? 'md:flex-none md:justify-start' : ''}` : ''
 
   return (
-    <div className="flex flex-col flex-wrap items-start gap-2 sm:flex-row sm:items-center">
-      <div className="flex h-9 items-center gap-0.5 rounded-lg border border-line bg-surface px-1 text-sm">
+    <div className={`flex flex-col flex-wrap items-start gap-2 sm:flex-row sm:items-center ${wFull}`}>
+      <div className={`flex h-9 items-center gap-0.5 rounded-lg border border-line bg-surface px-1 text-sm ${wFull}`}>
         {MODES.map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setMode(key)}
-            className={`flex h-7 items-center rounded-md px-3 font-medium transition-colors ${
+            className={`flex h-7 items-center justify-center rounded-md px-3 font-medium transition-colors ${flexFull} ${
               mode === key ? 'bg-surface2 text-fg' : 'text-muted hover:text-fg'
             }`}
           >
@@ -133,12 +138,12 @@ export default function PeriodSelector({ onChange, initialFrom, initialTo }: Pro
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 ${wFull}`}>
         <button type="button" onClick={() => step(-1)} disabled={stepDisabled} aria-label="Periodo anterior" className={arrowBtn}>
           <ChevronLeftIcon width={22} height={22} />
         </button>
 
-        <div className="flex h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3">
+        <div className={`flex h-9 min-w-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 ${flexFullCenter}`}>
           {mode === 'month' && (
             <select className={bareSelect} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
               {MONTHS.map((m, i) => (
@@ -172,13 +177,15 @@ export default function PeriodSelector({ onChange, initialFrom, initialTo }: Pro
           <ChevronRightIcon width={22} height={22} />
         </button>
 
-        <button
-          type="button"
-          onClick={goToday}
-          className="flex h-9 items-center rounded-lg border border-line bg-surface px-3 text-sm font-medium text-muted transition-colors hover:text-fg"
-        >
-          Hoy
-        </button>
+        {mode !== 'range' && (
+          <button
+            type="button"
+            onClick={goToday}
+            className="flex h-9 items-center rounded-lg border border-line bg-surface px-3 text-sm font-medium text-muted transition-colors hover:text-fg"
+          >
+            Hoy
+          </button>
+        )}
       </div>
     </div>
   )

@@ -162,7 +162,7 @@ export default function Panel() {
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-base font-semibold tracking-tight text-fg">En el periodo</h2>
-        <PeriodSelector onChange={(from, to) => setRange({ from, to })} />
+        <PeriodSelector fullWidth="mobile" onChange={(from, to) => setRange({ from, to })} />
       </div>
 
       <div className="mb-8 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">

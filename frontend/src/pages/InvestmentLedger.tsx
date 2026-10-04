@@ -57,8 +57,8 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <input required type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+      <input required type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <input required type="text" inputMode="decimal" placeholder="Precio de compra" className="input" value={price} onChange={(e) => setPrice(e.target.value)} />
         <input required type="text" inputMode="decimal" placeholder="Importe €" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
