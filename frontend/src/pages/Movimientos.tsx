@@ -413,6 +413,45 @@ export default function Movimientos() {
     )
   }
 
+  const actionButtons = (
+    <div className="relative flex items-center gap-2">
+      <button
+        onClick={() => {
+          setEditing(null)
+          setShowModal(true)
+        }}
+        className="btn-primary"
+      >
+        + Nuevo movimiento
+      </button>
+      <button
+        onClick={() => setMenuOpen((o) => !o)}
+        className="btn hidden px-2 md:inline-flex"
+        aria-label="Más opciones"
+        title="Más opciones"
+      >
+        ⋯
+      </button>
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+          <div className="absolute right-0 top-full z-20 mt-1 w-max overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-lg">
+            <button
+              onClick={() => {
+                setMenuOpen(false)
+                fileInputRef.current?.click()
+              }}
+              disabled={busy}
+              className="block w-full whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-muted transition hover:bg-surface2 hover:text-fg disabled:opacity-50"
+            >
+              Cargar datos desde CSV
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="flex flex-col md:h-full">
       <h1 className="mb-5 hidden shrink-0 text-2xl font-semibold tracking-tight md:block">Movimientos</h1>
@@ -421,11 +460,11 @@ export default function Movimientos() {
 
       <AccountBar />
 
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:justify-end">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:hidden">
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="btn inline-flex items-center gap-1.5 md:hidden"
+          className="btn inline-flex items-center gap-1.5"
         >
           <SlidersHorizontal size={16} />
           Filtros
@@ -433,42 +472,7 @@ export default function Movimientos() {
           <ChevronDown size={16} className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        <div className="relative flex items-center gap-2">
-          <button
-            onClick={() => {
-              setEditing(null)
-              setShowModal(true)
-            }}
-            className="btn-primary"
-          >
-            + Nuevo movimiento
-          </button>
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            className="btn hidden px-2 md:inline-flex"
-            aria-label="Más opciones"
-            title="Más opciones"
-          >
-            ⋯
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full z-20 mt-1 w-max overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-lg">
-                <button
-                  onClick={() => {
-                    setMenuOpen(false)
-                    fileInputRef.current?.click()
-                  }}
-                  disabled={busy}
-                  className="block w-full whitespace-nowrap rounded-md px-3 py-2 text-left text-sm text-muted transition hover:bg-surface2 hover:text-fg disabled:opacity-50"
-                >
-                  Cargar datos desde CSV
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {actionButtons}
       </div>
 
       <div
@@ -579,6 +583,8 @@ export default function Movimientos() {
             Limpiar
           </button>
         )}
+
+        <div className="hidden md:ml-auto md:flex">{actionButtons}</div>
       </div>
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">

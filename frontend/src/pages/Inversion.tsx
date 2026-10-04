@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Investment, type InvestmentInput } from '../api'
 import InvestmentModal from '../components/InvestmentModal'
@@ -12,7 +13,9 @@ export default function Inversion() {
   const hideAmounts = useHideAmounts()
   const queryClient = useQueryClient()
   const [showPlan, setShowPlan] = useState(true)
-  const [tab, setTab] = useState<'dashboard' | 'detalle'>('dashboard')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = searchParams.get('tab') === 'detalle' ? 'detalle' : 'dashboard'
+  const setTab = (next: 'dashboard' | 'detalle') => setSearchParams(next === 'dashboard' ? {} : { tab: next })
   const { data: investments = [] } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const { data: summary = null } = useQuery({ queryKey: ['investments-summary'], queryFn: () => api.investments.summary() })
   const { data: composition = [] } = useQuery({ queryKey: ['investments-composition'], queryFn: () => api.investments.composition() })

@@ -292,13 +292,17 @@ let cachedTokenExpiry = 0
 
 async function currentToken(): Promise<string | undefined> {
   if (cachedToken && cachedTokenExpiry - Date.now() / 1000 > 30) return cachedToken
-  const { data } = await authClient.token()
-  const token = sessionTokenFromBetaSdkActualShape(data)
-  if (token) {
-    cachedToken = token
-    cachedTokenExpiry = jwtExpirySeconds(token)
+  try {
+    const { data } = await authClient.token()
+    const token = sessionTokenFromBetaSdkActualShape(data)
+    if (token) {
+      cachedToken = token
+      cachedTokenExpiry = jwtExpirySeconds(token)
+    }
+    return token
+  } catch {
+    return undefined
   }
-  return token
 }
 
 async function fetchWithToken(path: string, options: RequestInit | undefined, token: string | undefined) {
