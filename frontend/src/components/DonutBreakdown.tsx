@@ -64,9 +64,9 @@ function buildLegendRows(items: DonutItem[]): LegendRow[] {
 }
 
 const RADIAN = Math.PI / 180
-// matches the fixed h-40 w-40 (160px) chart box below — donut center + its radius
-const CENTER = 80
-const OUTER_RADIUS = 80
+const CHART_BOX_SIZE = 160
+const CENTER = CHART_BOX_SIZE / 2
+const OUTER_RADIUS = CHART_BOX_SIZE / 2
 const TOOLTIP_GAP = 14 // how far past the ring edge the tooltip sits
 
 // Donut + legend, shared by every "breakdown" card in Análisis: a total in the

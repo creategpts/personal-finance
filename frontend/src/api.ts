@@ -81,10 +81,14 @@ export interface TopDestinationItem {
   color: string
 }
 
+export type NetWorthGranularity = 'day' | 'week' | 'month'
+
 export interface NetWorthPoint {
-  month: string // "YYYY-MM"
+  date: string
   total: number
-  by_type: Record<string, number> // account_type key -> month-end balance
+  by_type: Record<string, number>
+  investment_invertido: number
+  investment_valor_actual: number
 }
 
 export interface MonthlyKpiPoint {
@@ -369,7 +373,8 @@ export const api = {
       request<DashboardSummary>(`/dashboard/summary?from_date=${fromDate}&to_date=${toDate}`),
     budgetVsActual: (fromDate: string, toDate: string) =>
       request<BudgetVsActualItem[]>(`/dashboard/budget-vs-actual?from_date=${fromDate}&to_date=${toDate}`),
-    netWorth: (months: number) => request<NetWorthPoint[]>(`/dashboard/net-worth?months=${months}`),
+    netWorth: (from: string, to: string, granularity: NetWorthGranularity = 'month') =>
+      request<NetWorthPoint[]>(`/dashboard/net-worth?from_date=${from}&to_date=${to}&granularity=${granularity}`),
     monthlySeries: (months: number) => request<MonthlyKpiPoint[]>(`/dashboard/monthly-series?months=${months}`),
     breakdown: (fromDate: string, toDate: string, kpi: 'expense' | 'income') =>
       request<CategoryBreakdownItem[]>(`/dashboard/breakdown?from_date=${fromDate}&to_date=${toDate}&kpi=${kpi}`),

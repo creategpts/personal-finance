@@ -2,7 +2,6 @@ import { Fragment, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type RecurringExpense, type RecurringExpenseInput } from '../api'
 import RecurringModal from '../components/RecurringModal'
-import GoalsPanel from '../components/GoalsPanel'
 import Money from '../components/Money'
 import { ExpandIcon, ShrinkIcon } from '../components/Icons'
 import { useHideAmounts } from '../hideAmounts'
@@ -303,9 +302,7 @@ export default function Planificacion() {
 
   return (
     <div>
-      <h1 className="mb-5 hidden text-2xl font-semibold tracking-tight md:block">Planificación</h1>
-
-      <GoalsPanel />
+      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Planificación</h1>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <RecurringTable

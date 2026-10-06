@@ -92,6 +92,11 @@ export default function Panel() {
     queryFn: () => api.accountValues.latest(),
   })
 
+  const { data: investmentsSummary = null } = useQuery({
+    queryKey: ['investments-summary'],
+    queryFn: () => api.investments.summary(),
+  })
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => api.categories.list(),
@@ -157,12 +162,14 @@ export default function Panel() {
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatTile label="Disponible para gasto" value={sumByType('gasto')} blurred={hideAmounts} />
         <StatTile label="Ahorro" value={sumByType('ahorro')} blurred={hideAmounts} />
-        <StatTile label="Inversión" value={sumByType('inversion')} blurred={hideAmounts} />
+        <StatTile label="Inversión" value={investmentsSummary?.valor_actual ?? 0} blurred={hideAmounts} />
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-base font-semibold tracking-tight text-fg">En el periodo</h2>
-        <PeriodSelector fullWidth="mobile" onChange={(from, to) => setRange({ from, to })} />
+      <div className="mb-4 text-xs font-medium text-muted">
+        Periodo
+        <div className="mt-0.5">
+          <PeriodSelector fullWidth="mobile" onChange={(from, to) => setRange({ from, to })} />
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">

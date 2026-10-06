@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { AuthView, SignedIn, SignedOut } from '@neondatabase/auth/react/ui'
-import { ArrowLeftRight, ChartPie, Target, TrendingUp } from 'lucide-react'
+import { ArrowLeftRight, ChartPie, Home, TrendingUp } from 'lucide-react'
 import Panel from './pages/Panel'
 import Movimientos from './pages/Movimientos'
 import Analisis from './pages/Analisis'
@@ -13,10 +13,10 @@ import UserMenu from './components/UserMenu'
 import { loadSettings, useSettings } from './settings'
 
 const navItems = [
+  { to: '/', label: 'Inicio', end: true, icon: Home },
   { to: '/movimientos', label: 'Movimientos', end: false, icon: ArrowLeftRight },
-  { to: '/analisis', label: 'Análisis', end: false, icon: ChartPie },
-  { to: '/planificacion', label: 'Planificación', end: false, icon: Target },
   { to: '/inversion', label: 'Inversión', end: false, icon: TrendingUp },
+  { to: '/analisis', label: 'Análisis', end: false, icon: ChartPie },
 ]
 
 function AuthPage() {
@@ -40,18 +40,18 @@ function Shell() {
   return (
     <div className="flex h-dvh flex-col overflow-hidden text-fg md:flex-row">
       <header className="flex shrink-0 items-center justify-between border-b border-line bg-surface px-4 py-3 md:hidden">
-        <Link to="/" className="flex items-center gap-2 hover:opacity-80">
+        <span className="flex items-center gap-2">
           <span className="text-lg leading-none">{favicon}</span>
           <span className="text-lg font-semibold tracking-tight">{app_name}</span>
-        </Link>
+        </span>
         <UserMenu openDown avatarOnly />
       </header>
 
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface md:flex">
-        <Link to="/" className="flex items-center gap-2 px-5 py-5 hover:opacity-80">
+        <span className="flex items-center gap-2 px-5 py-5">
           <span className="text-lg leading-none">{favicon}</span>
           <span className="text-lg font-semibold tracking-tight">{app_name}</span>
-        </Link>
+        </span>
         <nav className="flex flex-col gap-0.5 px-3">
           {navItems.map((item) => (
             <NavLink

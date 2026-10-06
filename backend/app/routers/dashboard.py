@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import investment_logic, models, schemas
 from ..database import get_db
 from ..kpi_logic import category_name_sets, kpi_amount, matches_kpi
 from ..recurring_logic import generate_due_recurring
@@ -16,35 +16,43 @@ def _month_end(year: int, month: int) -> date:
     return first_next - timedelta(days=1)
 
 
+def _evaluation_dates(from_date: date, to_date: date, granularity: str) -> list[date]:
+    if granularity == "day":
+        return [from_date + timedelta(days=i) for i in range((to_date - from_date).days + 1)]
+    if granularity == "week":
+        dates = []
+        d = from_date + timedelta(days=6)
+        while d < to_date:
+            dates.append(d)
+            d += timedelta(days=7)
+        dates.append(to_date)
+        return dates
+    return [_month_end(yy, mm) for (yy, mm) in _months_in_range(from_date, to_date)]
+
+
 @router.get("/net-worth", response_model=list[schemas.NetWorthPoint])
-def net_worth(months: int = 12, db: Session = Depends(get_db)):
-    """Month-end net worth (Done movements only), split by account type.
+def net_worth(from_date: date, to_date: date, granularity: str = "month", db: Session = Depends(get_db)):
+    """Net worth (Done movements only) at each evaluation date in [from_date, to_date],
+    split by account type. `granularity` controls point spacing: "day", "week" or "month"
+    (month-end, the default).
 
     Balance of an account at date D = initial_balance + net of Done movements up to D.
     Only accounts tagged include_in_total count, matching the current total.
     """
-    months = max(1, min(months, 600))
     accounts = (
         db.query(models.Category)
         .filter(models.Category.type.in_(models.ACCOUNT_TYPES), models.Category.include_in_total.is_(True))
         .all()
     )
     done = db.query(models.Movement).filter(models.Movement.status == models.MovementStatus.done).all()
+    holdings = [
+        ("balance" if inv.type == "seguros" else "fund", inv.transactions, inv.snapshots)
+        for inv in db.query(models.Investment).all()
+    ]
 
-    today = date.today()
-    period: list[tuple[int, int]] = []
-    y, m = today.year, today.month
-    for _ in range(months):
-        period.append((y, m))
-        m -= 1
-        if m == 0:
-            m, y = 12, y - 1
-    period.reverse()
-
-    # ponytail: naive O(months·accounts·movements) — fine at this data size; index by account if it grows.
+    # ponytail: naive O(points·accounts·movements) — fine at this data size; index by account if it grows.
     points = []
-    for (yy, mm) in period:
-        end = _month_end(yy, mm)
+    for end in _evaluation_dates(from_date, to_date, granularity):
         by_type: dict[str, float] = {}
         total = 0.0
         for acc in accounts:
@@ -55,7 +63,16 @@ def net_worth(months: int = 12, db: Session = Depends(get_db)):
             )
             by_type[acc.type] = by_type.get(acc.type, 0.0) + bal
             total += bal
-        points.append(schemas.NetWorthPoint(month=f"{yy:04d}-{mm:02d}", total=total, by_type=by_type))
+        investment_invertido, investment_valor_actual = investment_logic.value_at(holdings, end)
+        points.append(
+            schemas.NetWorthPoint(
+                date=end.isoformat(),
+                total=total,
+                by_type=by_type,
+                investment_invertido=investment_invertido,
+                investment_valor_actual=investment_valor_actual,
+            )
+        )
     return points
 
 

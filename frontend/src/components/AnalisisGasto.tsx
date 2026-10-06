@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type TopDestinationItem } from '../api'
+import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { api } from '../api'
 import DonutBreakdown, { type DonutItem } from './DonutBreakdown'
 
-const GRID_COLOR = 'rgba(128,128,128,0.18)'
 const AXIS_COLOR = '#9a9a9a'
 const COLOR_GASTO = '#f5a623'
 const COLOR_PPTO = '#0070f3'
@@ -67,7 +66,7 @@ function MonthlyTooltip({ active, payload, label }: { active?: boolean; payload?
   )
 }
 
-export default function AnalisisGasto({ hideAmounts, range }: { hideAmounts: boolean; range: { from: string; to: string } }) {
+export function AnalisisGastoDonut({ hideAmounts, range }: { hideAmounts: boolean; range: { from: string; to: string } }) {
   const navigate = useNavigate()
   const rangeReady = !!range.from && !!range.to
   const { data: expenseItems = [] } = useQuery({
@@ -75,26 +74,10 @@ export default function AnalisisGasto({ hideAmounts, range }: { hideAmounts: boo
     queryFn: () => api.dashboard.breakdown(range.from, range.to, 'expense'),
     enabled: rangeReady,
   })
-  const { data: topDestinations = [] } = useQuery({
-    queryKey: ['dashboard-top-destinations', range.from, range.to],
-    queryFn: () => api.dashboard.topDestinations(range.from, range.to, 10),
-    enabled: rangeReady,
-  })
 
-  const [months, setMonths] = useState(12)
-  const { data: kpi = [] } = useQuery({
-    queryKey: ['dashboard-monthly-series', months],
-    queryFn: () => api.dashboard.monthlySeries(months),
-  })
-
-  function goToCategory(field: 'origin' | 'destination', category: string) {
+  function goToCategory(category: string) {
     if (!range.from || !range.to) return
-    navigate(`/movimientos?from=${range.from}&to=${range.to}&${field}=${encodeURIComponent(category)}`)
-  }
-
-  function goToMonth(month: string) {
-    const [from, to] = monthRange(month)
-    navigate(`/movimientos?from=${from}&to=${to}&kpi=expense`)
+    navigate(`/movimientos?from=${range.from}&to=${range.to}&destination=${encodeURIComponent(category)}`)
   }
 
   const expenseDonut: DonutItem[] = expenseItems.map((it) => ({
@@ -104,6 +87,30 @@ export default function AnalisisGasto({ hideAmounts, range }: { hideAmounts: boo
     color: it.color,
     icon: it.icon,
   }))
+
+  return (
+    <DonutBreakdown
+      title="En qué se va el dinero"
+      info={INFO_EXPENSE}
+      items={expenseDonut}
+      hideAmounts={hideAmounts}
+      onItemClick={goToCategory}
+    />
+  )
+}
+
+export default function AnalisisGasto({ hideAmounts }: { hideAmounts: boolean }) {
+  const navigate = useNavigate()
+  const [months, setMonths] = useState(12)
+  const { data: kpi = [] } = useQuery({
+    queryKey: ['dashboard-monthly-series', months],
+    queryFn: () => api.dashboard.monthlySeries(months),
+  })
+
+  function goToMonth(month: string) {
+    const [from, to] = monthRange(month)
+    navigate(`/movimientos?from=${from}&to=${to}&kpi=expense`)
+  }
 
   const gastoMedio = kpi.length ? kpi.reduce((s, p) => s + p.expense, 0) / kpi.length : 0
   const monthlyData = kpi.map((p) => ({
@@ -116,53 +123,7 @@ export default function AnalisisGasto({ hideAmounts, range }: { hideAmounts: boo
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <DonutBreakdown
-          title="En qué se va el dinero"
-          info={INFO_EXPENSE}
-          items={expenseDonut}
-          hideAmounts={hideAmounts}
-          onItemClick={(category) => goToCategory('destination', category)}
-        />
-
-        <div className="card flex h-full flex-col p-5">
-          <h3 className="mb-4 shrink-0 text-sm font-semibold text-fg">Los 10 destinos que más gastan</h3>
-          {topDestinations.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-faint">Sin datos para este periodo</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(220, topDestinations.length * 34)}>
-              <BarChart data={topDestinations} layout="vertical" barCategoryGap="25%">
-                <XAxis type="number" stroke={AXIS_COLOR} fontSize={12} tickLine={false} axisLine={{ stroke: GRID_COLOR }} />
-                <YAxis type="category" dataKey="destination" stroke={AXIS_COLOR} fontSize={12} tickLine={false} axisLine={false} width={130} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(128,128,128,0.08)' }}
-                  formatter={(v) => currency.format(Number(v))}
-                  contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
-                  labelStyle={{ color: 'var(--fg)' }}
-                  itemStyle={{ color: 'var(--fg)' }}
-                />
-                <Bar
-                  dataKey="amount"
-                  radius={[0, 4, 4, 0]}
-                  maxBarSize={18}
-                  cursor="pointer"
-                  isAnimationActive={false}
-                  onClick={(data) => {
-                    const destination = (data as unknown as { payload?: TopDestinationItem })?.payload?.destination
-                    if (destination) goToCategory('destination', destination)
-                  }}
-                >
-                  {topDestinations.map((it) => (
-                    <Cell key={it.destination} fill={it.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      <div className="mb-4 mt-8 flex items-center justify-between gap-4">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold tracking-tight text-fg">Tendencia mensual</h2>
         <div className="flex gap-2">
           {RANGES.map((r) => (

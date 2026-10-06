@@ -41,7 +41,7 @@ interface Props {
 // borderless select/date that blends into its box (the box sets the height);
 // appearance-none drops the native dropdown caret — the box itself already looks clickable
 const bareSelect = 'cursor-pointer appearance-none border-0 bg-transparent text-sm font-medium text-fg focus:outline-none'
-const bareDate = 'w-0 min-w-0 flex-1 cursor-pointer border-0 bg-transparent text-sm text-fg focus:outline-none'
+const bareDate = 'w-0 min-w-[6.5rem] flex-1 cursor-pointer border-0 bg-transparent text-sm text-fg focus:outline-none'
 const arrowBtn = 'flex items-center justify-center text-muted transition-colors hover:text-fg disabled:opacity-30'
 
 export default function PeriodSelector({ onChange, initialFrom, initialTo, fullWidth }: Props) {

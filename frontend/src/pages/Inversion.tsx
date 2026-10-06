@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Investment, type InvestmentInput } from '../api'
 import InvestmentModal from '../components/InvestmentModal'
@@ -13,12 +12,8 @@ export default function Inversion() {
   const hideAmounts = useHideAmounts()
   const queryClient = useQueryClient()
   const [showPlan, setShowPlan] = useState(false)
-  const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'detalle' ? 'detalle' : 'dashboard'
-  const setTab = (next: 'dashboard' | 'detalle') => setSearchParams(next === 'dashboard' ? {} : { tab: next })
   const { data: investments = [] } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const { data: summary = null } = useQuery({ queryKey: ['investments-summary'], queryFn: () => api.investments.summary() })
-  const { data: composition = [] } = useQuery({ queryKey: ['investments-composition'], queryFn: () => api.investments.composition() })
   const { data: accountCheck = [] } = useQuery({ queryKey: ['investments-account-check'], queryFn: () => api.investments.accountCheck() })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
   const investmentAccounts = categories.filter((c) => c.type === 'inversion')
@@ -78,66 +73,43 @@ export default function Inversion() {
 
   return (
     <div>
-      <h1 className="mb-5 hidden text-2xl font-semibold tracking-tight md:block">Inversión</h1>
-
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex gap-0.5 rounded-lg border border-line bg-surface p-0.5">
-          {([
-            ['dashboard', 'Dashboard'],
-            ['detalle', 'Detalle'],
-          ] as const).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                tab === key ? 'bg-primary text-primaryfg' : 'text-muted hover:text-fg'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <h1 className="hidden text-2xl font-semibold tracking-tight md:block">Inversión</h1>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
           <button onClick={() => setShowPlan(true)} className="btn">
             Plan de inversión
           </button>
-          {tab === 'detalle' && (
-            <>
-              <button onClick={handleRefreshAll} disabled={refreshingAll} className="btn">
-                {refreshingAll ? 'Actualizando…' : 'Actualizar precios (FT)'}
-              </button>
-              <button
-                onClick={() => {
-                  setEditing(null)
-                  setPrefillAccount(undefined)
-                  setShowModal(true)
-                }}
-                className="btn-primary"
-              >
-                + Nueva inversión
-              </button>
-            </>
-          )}
+          <button onClick={handleRefreshAll} disabled={refreshingAll} className="btn">
+            {refreshingAll ? 'Actualizando…' : 'Actualizar precios (FT)'}
+          </button>
+          <button
+            onClick={() => {
+              setEditing(null)
+              setPrefillAccount(undefined)
+              setShowModal(true)
+            }}
+            className="btn-primary"
+          >
+            + Nueva inversión
+          </button>
         </div>
       </div>
 
-      {tab === 'dashboard' && (
-        <InversionDashboard
-          investments={investments}
-          summary={summary}
-          composition={composition}
-          accountCheck={accountCheck}
-          hideAmounts={hideAmounts}
-          onAssigned={refresh}
-          onCreateForAccount={(account) => {
-            setEditing(null)
-            setPrefillAccount(account)
-            setShowModal(true)
-          }}
-        />
-      )}
-      {tab === 'detalle' && (
+      <InversionDashboard
+        investments={investments}
+        summary={summary}
+        accountCheck={accountCheck}
+        hideAmounts={hideAmounts}
+        onAssigned={refresh}
+        onCreateForAccount={(account) => {
+          setEditing(null)
+          setPrefillAccount(account)
+          setShowModal(true)
+        }}
+      />
+
+      <div className="mt-8">
         <InversionDetalle
           investments={investments}
           hideAmounts={hideAmounts}
@@ -146,7 +118,7 @@ export default function Inversion() {
             setShowModal(true)
           }}
         />
-      )}
+      </div>
 
       {showModal && (
         <InvestmentModal

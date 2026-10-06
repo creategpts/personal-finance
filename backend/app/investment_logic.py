@@ -146,17 +146,35 @@ def _value_at_balance(steps, d):
     return invertido, valor
 
 
-def portfolio_time_series(holdings) -> list[dict]:
+def _prepare(holdings):
     """holdings: iterable of (kind, transactions, snapshots) triples, kind "fund" or
     "balance" (lump-sum, e.g. seguros — snapshots ignored, the running transaction sum
-    IS the value). Returns one point per date any holding has a transaction or a price
-    snapshot, summing total_invertido and valor_actual across holdings."""
+    IS the value)."""
     prepared = []
     for kind, transactions, snapshots in holdings:
         if kind == "balance":
             prepared.append(("balance", _step_series_balance(transactions), None))
         else:
             prepared.append(("fund", _step_series_fund(transactions), sorted(((s.date, s.price) for s in snapshots))))
+    return prepared
+
+
+def value_at(holdings, d) -> tuple[float, float]:
+    """total_invertido, valor_actual across holdings, evaluated at date d — same
+    fallback as portfolio_time_series: a holding with no known invertido at this
+    point counts its valor as invertido instead."""
+    total_invertido = total_valor = 0.0
+    for kind, steps, prices in _prepare(holdings):
+        invertido, valor = _value_at_balance(steps, d) if kind == "balance" else _value_at_fund(steps, prices, d)
+        total_invertido += invertido or valor
+        total_valor += valor
+    return total_invertido, total_valor
+
+
+def portfolio_time_series(holdings) -> list[dict]:
+    """Returns one point per date any holding has a transaction or a price
+    snapshot, summing total_invertido and valor_actual across holdings."""
+    prepared = _prepare(holdings)
 
     all_dates = sorted(
         {d for _, steps, _ in prepared for d, _, _ in steps}

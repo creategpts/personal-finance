@@ -28,16 +28,12 @@ export default function AnalisisIngreso({ hideAmounts, range }: { hideAmounts: b
   }))
 
   return (
-    <div>
-      <div className="max-w-2xl">
-        <DonutBreakdown
-          title="De dónde viene el dinero"
-          info={INFO_INCOME}
-          items={incomeDonut}
-          hideAmounts={hideAmounts}
-          onItemClick={goToCategory}
-        />
-      </div>
-    </div>
+    <DonutBreakdown
+      title="De dónde viene el dinero"
+      info={INFO_INCOME}
+      items={incomeDonut}
+      hideAmounts={hideAmounts}
+      onItemClick={goToCategory}
+    />
   )
 }

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type KpiName, type Movement, type MovementInput, type MovementStatus } from '../api'
 import { buildRows } from '../movementGroups'
@@ -59,6 +59,7 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: () =>
 }
 
 export default function Movimientos() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   // KPI filter (income/expense/saving/investment): aggregates several origins/destinations,
   // so it can't be a single-field bar control -> lives in the URL, applied server-side, shown as a chip.
@@ -420,9 +421,12 @@ export default function Movimientos() {
           setEditing(null)
           setShowModal(true)
         }}
-        className="btn-primary"
+        className="btn-primary whitespace-nowrap"
       >
         + Nuevo movimiento
+      </button>
+      <button type="button" onClick={() => navigate('/planificacion')} className="btn whitespace-nowrap">
+        Planificados
       </button>
       <button
         onClick={() => setMenuOpen((o) => !o)}
@@ -454,13 +458,16 @@ export default function Movimientos() {
 
   return (
     <div className="flex flex-col md:h-full">
-      <h1 className="mb-5 hidden shrink-0 text-2xl font-semibold tracking-tight md:block">Movimientos</h1>
+      <div className="mb-5 hidden shrink-0 items-center justify-between gap-3 md:flex">
+        <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
+        {actionButtons}
+      </div>
 
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
 
       <AccountBar />
 
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:hidden">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 md:hidden">
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
@@ -583,8 +590,6 @@ export default function Movimientos() {
             Limpiar
           </button>
         )}
-
-        <div className="hidden md:ml-auto md:flex">{actionButtons}</div>
       </div>
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">

@@ -203,7 +203,7 @@ export default function InvestmentLedger() {
 
   return (
     <div>
-      <button type="button" onClick={() => navigate('/inversion?tab=detalle')} className="mb-4 text-sm font-medium text-muted hover:text-fg">
+      <button type="button" onClick={() => navigate('/inversion')} className="mb-4 text-sm font-medium text-muted hover:text-fg">
         ← Volver a Inversión
       </button>
       <h1 className="mb-5 text-2xl font-semibold tracking-tight">{investment.name}</h1>

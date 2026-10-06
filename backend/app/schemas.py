@@ -129,9 +129,11 @@ class TopDestinationItem(BaseModel):
 
 
 class NetWorthPoint(BaseModel):
-    month: str  # "YYYY-MM"
+    date: str  # "YYYY-MM-DD" — the point's evaluation date (granularity-dependent spacing)
     total: float
-    by_type: dict[str, float]  # account_type key -> month-end balance
+    by_type: dict[str, float]  # account_type key -> balance as of `date`
+    investment_invertido: float  # capital invertido en inversiones, a fecha `date`
+    investment_valor_actual: float  # valor de mercado de las inversiones, a fecha `date`
 
 
 class MonthlyKpiPoint(BaseModel):
