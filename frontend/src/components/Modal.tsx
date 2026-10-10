@@ -51,7 +51,7 @@ export default function Modal({ title, size = 'md', onClose, onSubmit, headerAct
           {headerAction}
         </div>
 
-        <div className={`min-h-0 flex-1 px-5 py-5 sm:px-7 sm:py-6 ${bodyClassName ?? ''}`}>{children}</div>
+        <div className={`min-h-0 flex-1 px-5 py-5 max-sm:overflow-y-auto sm:px-7 sm:py-6 ${bodyClassName ?? ''}`}>{children}</div>
 
         {footer && (
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-linesoft px-5 py-4 sm:px-7">

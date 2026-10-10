@@ -63,14 +63,14 @@ export default function CategoryPicker({
 
   useEffect(() => {
     if (!open) return
-    function onDocDown(e: MouseEvent) {
+    function onDocDown(e: PointerEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false)
         setActiveGroup(null)
       }
     }
-    document.addEventListener('mousedown', onDocDown)
-    return () => document.removeEventListener('mousedown', onDocDown)
+    document.addEventListener('pointerdown', onDocDown)
+    return () => document.removeEventListener('pointerdown', onDocDown)
   }, [open])
 
   function pick(v: string) {
@@ -114,6 +114,7 @@ export default function CategoryPicker({
       <button
         type="button"
         onClick={() => {
+          ;(document.activeElement as HTMLElement | null)?.blur() // drop the mobile keyboard
           setOpen((o) => !o)
           setActiveGroup(null)
         }}
@@ -126,7 +127,9 @@ export default function CategoryPicker({
         <span className="ml-2 shrink-0 text-faint">▾</span>
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
+        // mobile: bottom sheet (fixed) so it can't be clipped by the modal or hidden
+        // behind the on-screen keyboard/body scroll-lock; desktop: popover under the button.
+        <div className="fixed inset-x-3 bottom-3 z-[60] max-h-[55vh] overflow-auto rounded-xl border border-line bg-surface p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:z-30 sm:mt-1 sm:max-h-64 sm:w-full sm:rounded-lg sm:shadow-lg">
           {activeGroup ? (
             groupRows(activeGroup)
           ) : soleGroup ? (

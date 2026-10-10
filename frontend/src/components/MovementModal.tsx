@@ -172,18 +172,18 @@ export default function MovementModal({ categories, initial, onClose, onDelete, 
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
+          <div className="block text-sm">
             Origen
             <div className="mt-1.5">
               <CategoryPicker items={originItems} value={origin} onChange={setOrigin} />
             </div>
-          </label>
-          <label className="block text-sm">
+          </div>
+          <div className="block text-sm">
             Destino
             <div className="mt-1.5">
               <CategoryPicker items={destinationItems} value={destination} onChange={setDestination} />
             </div>
-          </label>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-4 sm:justify-end sm:gap-8">
