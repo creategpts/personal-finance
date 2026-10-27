@@ -202,6 +202,11 @@ class Investment(Base):
         cascade="all, delete-orphan",
         order_by="PriceSnapshot.date",
     )
+    price_history = relationship(
+        "PriceHistory",
+        cascade="all, delete-orphan",
+        order_by="PriceHistory.date",
+    )
 
 
 class InvestmentTransaction(Base):
@@ -242,6 +247,22 @@ class PriceSnapshot(Base):
     __table_args__ = (UniqueConstraint("investment_id", "date", name="uq_price_snapshot_investment_date"),)
 
     investment = relationship("Investment", back_populates="snapshots")
+
+
+class PriceHistory(Base):
+    """Daily market close for a holding, backfilled from FT for the buy-the-dip view.
+    Separate from PriceSnapshot on purpose: snapshots are the user's own readings and
+    drive the invertido-vs-valor chart (one point per date), this is bulk market data
+    that would otherwise pad that chart with dates before the first purchase."""
+
+    __tablename__ = "price_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    investment_id = Column(Integer, ForeignKey("investments.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False)
+    price = Column(Float, nullable=False)
+
+    __table_args__ = (UniqueConstraint("investment_id", "date", name="uq_price_history_investment_date"),)
 
 
 class RecurringExpense(Base):

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .. import ft_price, investment_logic, models, schemas
 from ..database import get_db
 from ..kpi_logic import _is_valuation_adjustment, category_name_sets
+from .account_values import _live_balance
 
 router = APIRouter(prefix="/api/investments", tags=["investments"])
 
@@ -184,6 +185,84 @@ def refresh_all_prices(db: Session = Depends(get_db)):
         results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price))
     db.commit()
     return results
+
+
+# ponytail: 10 years is "enough" ATH for index funds; FT's ajax takes any range, so
+# raise this if a fund's real high predates it.
+HISTORY_YEARS = 10
+SYNC_THROTTLE = timedelta(minutes=10)
+
+
+@router.post("/{investment_id}/sync-market", response_model=schemas.MarketSyncResult)
+def sync_market(investment_id: int, db: Session = Depends(get_db)):
+    """Refresh today's price and top up the daily history. One call per holding (the
+    client fires them in parallel) so a first 10-year backfill of several funds
+    doesn't have to fit in a single serverless request."""
+    inv = _get(db, investment_id)
+    symbol = ft_price.symbol_for(inv.ft_symbol, inv.isin)
+    if not symbol:
+        return schemas.MarketSyncResult(investment_id=inv.id, ok=False, error="Sin ISIN ni símbolo FT")
+    last = db.query(models.PriceHistory.date).filter_by(investment_id=inv.id).order_by(models.PriceHistory.date.desc()).first()
+    if last and inv.price_updated_at and datetime.utcnow() - inv.price_updated_at < SYNC_THROTTLE:
+        return schemas.MarketSyncResult(investment_id=inv.id, ok=True, skipped=True)
+    today = date.today()
+    start = last[0] + timedelta(days=1) if last else today.replace(year=today.year - HISTORY_YEARS)
+    try:
+        price = ft_price.fetch_ft_price(symbol)
+        rows = ft_price.fetch_ft_history(symbol, start, today) if start <= today else []
+    except Exception as e:
+        return schemas.MarketSyncResult(investment_id=inv.id, ok=False, error=str(e))
+    inv.current_price = price
+    inv.price_updated_at = datetime.utcnow()
+    _record_snapshot(inv, price)
+    known = {d for (d,) in db.query(models.PriceHistory.date).filter(models.PriceHistory.investment_id == inv.id, models.PriceHistory.date >= start)}
+    db.add_all(models.PriceHistory(investment_id=inv.id, date=d, price=p) for d, p in rows if d not in known)
+    db.commit()
+    return schemas.MarketSyncResult(investment_id=inv.id, ok=True)
+
+
+@router.get("/market", response_model=schemas.MarketOverview)
+def market(db: Session = Depends(get_db)):
+    settings = {s.key: s.value for s in db.query(models.Setting).all()}
+    account = settings.get("liquidity_account") or None
+    try:
+        emergency = float(settings.get("emergency_fund") or 0)
+    except ValueError:
+        emergency = 0.0
+    cat = db.query(models.Category).filter_by(name=account).first() if account else None
+    balance = _live_balance(db, cat) if cat else None
+    liquidity = schemas.Liquidity(
+        account=account,
+        balance=balance,
+        emergency_fund=emergency,
+        available=max(balance - emergency, 0.0) if balance is not None else None,
+    )
+
+    funds = []
+    cutoff = date.today() - timedelta(days=365)
+    for inv in db.query(models.Investment).filter_by(active=True).order_by(models.Investment.name):
+        if inv.type == "seguros" or not ft_price.symbol_for(inv.ft_symbol, inv.isin):
+            continue
+        points = {h.date: h.price for h in inv.price_history}
+        if not points:
+            continue  # FT never returned history for it (bad ISIN, manual-priced): nothing to chart
+        if inv.current_price > 0:
+            points[date.today()] = inv.current_price
+        stats = investment_logic.holding_stats_for(inv)
+        funds.append(
+            schemas.MarketFund(
+                investment_id=inv.id,
+                name=inv.name,
+                current_price=inv.current_price,
+                price_updated_at=inv.price_updated_at,
+                units_held=stats["units_held"],
+                avg_cost=stats["avg_cost"] if stats["units_held"] > 0 else None,
+                high_52w=max((p for d, p in points.items() if d >= cutoff), default=None),
+                all_time_high=max(points.values()),
+                series=[schemas.MarketPricePoint(date=d, price=p) for d, p in sorted(points.items())],
+            )
+        )
+    return schemas.MarketOverview(liquidity=liquidity, funds=funds)
 
 
 @router.get("/summary", response_model=schemas.PortfolioSummary)

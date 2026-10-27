@@ -286,6 +286,42 @@ class PriceRefreshResult(BaseModel):
     error: str | None = None
 
 
+class MarketSyncResult(BaseModel):
+    investment_id: int
+    ok: bool
+    skipped: bool = False
+    error: str | None = None
+
+
+class MarketPricePoint(BaseModel):
+    date: date_type
+    price: float
+
+
+class MarketFund(BaseModel):
+    investment_id: int
+    name: str
+    current_price: float
+    price_updated_at: datetime | None
+    units_held: float
+    avg_cost: float | None  # None when nothing is held, so the chart skips that line
+    high_52w: float | None
+    all_time_high: float | None
+    series: list[MarketPricePoint]
+
+
+class Liquidity(BaseModel):
+    account: str | None
+    balance: float | None
+    emergency_fund: float
+    available: float | None  # balance - emergency_fund, never below 0
+
+
+class MarketOverview(BaseModel):
+    liquidity: Liquidity
+    funds: list[MarketFund]
+
+
 class PriceLookupResult(BaseModel):
     ok: bool
     price: float | None = None

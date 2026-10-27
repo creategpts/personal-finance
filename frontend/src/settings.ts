@@ -9,6 +9,9 @@ export interface Settings {
   favicon: string // an emoji
   default_origin: string // Category.name preselected as Origen in a new movement ('' = first available)
   default_destination: string // Category.name preselected as Destino in a new movement ('' = first available)
+  liquidity_account: string // Cuenta (Ahorro) whose balance minus emergency_fund is the pull for buying dips ('' = none)
+  emergency_fund: string // € of that account reserved and never touched
+  dip_levels: string // comma-separated % drawdown thresholds for the buy alerts, ascending (e.g. '5,10,20')
 }
 
 const DEFAULTS: Settings = {
@@ -17,6 +20,9 @@ const DEFAULTS: Settings = {
   favicon: '🏛️',
   default_origin: '',
   default_destination: '',
+  liquidity_account: '',
+  emergency_fund: '0',
+  dip_levels: '5,10,20',
 }
 
 let value: Settings = { ...DEFAULTS }

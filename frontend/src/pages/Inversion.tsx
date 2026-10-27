@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Investment, type InvestmentInput } from '../api'
 import InvestmentModal from '../components/InvestmentModal'
 import InversionDashboard from '../components/InversionDashboard'
+import InversionOportunidades from '../components/InversionOportunidades'
 import InversionDetalle from '../components/InversionDetalle'
 import InversionPlan from '../components/InversionPlan'
 import Modal from '../components/Modal'
@@ -110,6 +111,11 @@ export default function Inversion() {
       />
 
       <div className="mt-8">
+        <InversionOportunidades
+          syncIds={investments.filter((i) => i.active && i.type !== 'seguros' && (i.ft_symbol || i.isin)).map((i) => i.id)}
+          accounts={categories.filter((c) => c.type === 'ahorro')}
+          hideAmounts={hideAmounts}
+        />
         <InversionDetalle
           investments={investments}
           hideAmounts={hideAmounts}

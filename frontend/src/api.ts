@@ -252,6 +252,30 @@ export interface PriceRefreshResult {
   error: string | null
 }
 
+export interface MarketFund {
+  investment_id: number
+  name: string
+  current_price: number
+  price_updated_at: string | null
+  units_held: number
+  avg_cost: number | null
+  high_52w: number | null
+  all_time_high: number | null
+  series: { date: string; price: number }[]
+}
+
+export interface MarketOverview {
+  liquidity: { account: string | null; balance: number | null; emergency_fund: number; available: number | null }
+  funds: MarketFund[]
+}
+
+export interface MarketSyncResult {
+  investment_id: number
+  ok: boolean
+  skipped: boolean
+  error: string | null
+}
+
 export interface PriceLookupResult {
   ok: boolean
   price: number | null
@@ -442,6 +466,8 @@ export const api = {
     history: (type?: InvestmentType) =>
       request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),
     historyFor: (id: number) => request<PortfolioHistoryPoint[]>(`/investments/${id}/history`),
+    market: () => request<MarketOverview>('/investments/market'),
+    syncMarket: (id: number) => request<MarketSyncResult>(`/investments/${id}/sync-market`, { method: 'POST' }),
     summary: () => request<PortfolioSummary>('/investments/summary'),
     composition: () => request<PortfolioCompositionItem[]>('/investments/composition'),
   },
