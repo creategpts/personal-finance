@@ -241,7 +241,7 @@ def market(db: Session = Depends(get_db)):
     funds = []
     cutoff = date.today() - timedelta(days=365)
     for inv in db.query(models.Investment).filter_by(active=True).order_by(models.Investment.name):
-        if inv.type == "seguros" or not ft_price.symbol_for(inv.ft_symbol, inv.isin):
+        if inv.type in ("seguros", "roboadvisor") or not ft_price.symbol_for(inv.ft_symbol, inv.isin):
             continue
         points = {h.date: h.price for h in inv.price_history}
         if not points:

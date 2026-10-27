@@ -7,17 +7,23 @@ export default function HoldingsTable({
   title,
   holdings,
   lumpSum,
+  showWeights,
   hideAmounts,
   onEdit,
 }: {
   title: string
   holdings: Investment[]
   lumpSum: boolean
+  showWeights?: boolean // Peso objetivo / actual, the latter relative to this table only
   hideAmounts: boolean
   onEdit: (inv: Investment) => void
 }) {
   const navigate = useNavigate()
   const blur = hideAmounts ? 'select-none blur-sm' : ''
+  const totalValor = holdings.filter((inv) => inv.active).reduce((sum, inv) => sum + inv.stats.valor_actual, 0)
+  const actualWeight = (inv: Investment) =>
+    inv.active && totalValor > 0 ? `${((inv.stats.valor_actual / totalValor) * 100).toFixed(1)}%` : '—'
+  const targetWeight = (inv: Investment) => `${inv.target_weight.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%`
   const sorted = [...holdings].sort((a, b) => b.stats.valor_actual - a.stats.valor_actual)
 
   return (
@@ -27,12 +33,13 @@ export default function HoldingsTable({
         <thead>
           <tr>
             <th>Nombre</th>
-            {!lumpSum && <th>ISIN</th>}
             {!lumpSum && <th className="text-right">Participaciones</th>}
             <th className="text-right">Total {lumpSum ? 'aportado' : 'invertido'}</th>
             {!lumpSum && <th className="text-right">Precio medio</th>}
             {!lumpSum && <th className="text-right">Valor liquidativo</th>}
             <th className="text-right">Valor de mercado</th>
+            {showWeights && <th className="text-right">Peso objetivo</th>}
+            {showWeights && <th className="text-right">Peso actual</th>}
             <th className="text-right">Plusvalía</th>
             <th className="text-right">Rentabilidad</th>
             <th></th>
@@ -46,12 +53,13 @@ export default function HoldingsTable({
               className={`cursor-pointer hover:bg-surface2 ${inv.active ? '' : 'opacity-50'}`}
             >
               <td className="font-medium text-fg">{inv.name}</td>
-              {!lumpSum && <td className="text-muted">{inv.isin ?? '—'}</td>}
-              {!lumpSum && <td className="text-right num">{inv.stats.units_held}</td>}
+              {!lumpSum && <td className="text-right num">{inv.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>}
               <td className="text-right"><Money value={inv.stats.total_invertido} className={blur} /></td>
               {!lumpSum && <td className="text-right"><Money value={inv.stats.avg_cost} className={blur} /></td>}
               {!lumpSum && <td className="text-right"><Money value={inv.current_price} className={blur} /></td>}
               <td className="text-right"><Money value={inv.stats.valor_actual} className={blur} /></td>
+              {showWeights && <td className="text-right num">{targetWeight(inv)}</td>}
+              {showWeights && <td className="text-right num">{actualWeight(inv)}</td>}
               <td className={`text-right ${inv.stats.plusvalia < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                 <Money value={inv.stats.plusvalia} className={blur} />
               </td>
@@ -87,7 +95,6 @@ export default function HoldingsTable({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-fg">{inv.name}</div>
-                {!lumpSum && <div className="truncate text-xs text-muted">{inv.isin ?? '—'}</div>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className={`text-right text-sm font-medium ${inv.stats.rentabilidad < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -116,6 +123,14 @@ export default function HoldingsTable({
                 <div className="text-faint">Valor de mercado</div>
                 <Money value={inv.stats.valor_actual} className={`num text-fg ${blur}`} />
               </div>
+              {showWeights && (
+                <div>
+                  <div className="text-faint">Peso obj. / actual</div>
+                  <span className="num text-fg">
+                    {targetWeight(inv)} / {actualWeight(inv)}
+                  </span>
+                </div>
+              )}
               <div>
                 <div className="text-faint">Plusvalía</div>
                 <Money value={inv.stats.plusvalia} className={`num ${inv.stats.plusvalia < 0 ? 'text-red-600' : 'text-emerald-600'} ${blur}`} />

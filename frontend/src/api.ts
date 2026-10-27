@@ -178,7 +178,7 @@ export interface GoalProgress {
   deadline: string | null // target_date: "YYYY-MM"
 }
 
-export type InvestmentType = 'fondo_inversion' | 'criptomoneda' | 'mmpp' | 'seguros'
+export type InvestmentType = 'fondo_inversion' | 'roboadvisor' | 'criptomoneda' | 'mmpp' | 'seguros'
 
 export type InvestmentTransactionKind = 'flow' | 'adjustment'
 

@@ -30,6 +30,7 @@ export default function InversionDetalle({
           title={INVESTMENT_TYPE_LABELS[type]}
           holdings={holdings}
           lumpSum={type === 'seguros'}
+          showWeights={type === 'fondo_inversion'}
           hideAmounts={hideAmounts}
           onEdit={onEditInvestment}
         />

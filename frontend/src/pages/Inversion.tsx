@@ -112,7 +112,7 @@ export default function Inversion() {
 
       <div className="mt-8">
         <InversionOportunidades
-          syncIds={investments.filter((i) => i.active && i.type !== 'seguros' && (i.ft_symbol || i.isin)).map((i) => i.id)}
+          syncIds={investments.filter((i) => i.active && i.type !== 'seguros' && i.type !== 'roboadvisor' && (i.ft_symbol || i.isin)).map((i) => i.id)}
           accounts={categories.filter((c) => c.type === 'ahorro')}
           hideAmounts={hideAmounts}
         />

@@ -2,6 +2,7 @@ import type { Investment, InvestmentType } from './api'
 
 export const INVESTMENT_TYPE_LABELS: Record<InvestmentType, string> = {
   fondo_inversion: 'Fondos de inversión',
+  roboadvisor: 'Roboadvisor',
   criptomoneda: 'Criptomonedas',
   mmpp: 'Metales preciosos',
   seguros: 'Seguros',
@@ -9,6 +10,7 @@ export const INVESTMENT_TYPE_LABELS: Record<InvestmentType, string> = {
 
 export const INVESTMENT_TYPE_COLORS: Record<InvestmentType, string> = {
   fondo_inversion: '#2563eb',
+  roboadvisor: '#7c3aed',
   criptomoneda: '#f59e0b',
   mmpp: '#ca8a04',
   seguros: '#059669',
@@ -16,6 +18,7 @@ export const INVESTMENT_TYPE_COLORS: Record<InvestmentType, string> = {
 
 export const INVESTMENT_TYPE_ICONS: Record<InvestmentType, string> = {
   fondo_inversion: 'ChartPie',
+  roboadvisor: 'Bot',
   criptomoneda: 'Bitcoin',
   mmpp: 'Gem',
   seguros: 'Shield',

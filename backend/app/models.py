@@ -48,7 +48,7 @@ class RecurrenceFrequency(str, enum.Enum):
 # Fixed investment holding types (Panel de inversión). Independent of ACCOUNT_TYPES /
 # Cuenta — a holding here is not a Category, it's a position tracked by its own
 # transactions (aportaciones/ventas), not by Movimientos.
-INVESTMENT_TYPES = ("fondo_inversion", "criptomoneda", "mmpp", "seguros")
+INVESTMENT_TYPES = ("fondo_inversion", "roboadvisor", "criptomoneda", "mmpp", "seguros")
 
 
 class Category(Base):

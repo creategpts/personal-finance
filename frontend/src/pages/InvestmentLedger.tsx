@@ -206,7 +206,8 @@ export default function InvestmentLedger() {
       <button type="button" onClick={() => navigate('/inversion')} className="mb-4 text-sm font-medium text-muted hover:text-fg">
         ← Volver a Inversión
       </button>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">{investment.name}</h1>
+      <h1 className={`${investment.isin ? 'mb-1' : 'mb-5'} text-2xl font-semibold tracking-tight`}>{investment.name}</h1>
+      {investment.isin && <p className="mb-5 text-sm text-muted">{investment.isin}</p>}
 
       <div className="mb-5 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <div className="card h-full space-y-5 p-5">
@@ -256,7 +257,7 @@ export default function InvestmentLedger() {
                       : tx.amount >= 0
                         ? 'Aportación'
                         : 'Retirada'
-                    : `${tx.units > 0 ? '+' : ''}${tx.units.toFixed(4)} participaciones`}{' '}
+                    : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
                   · <Money value={tx.amount} />
                   {tx.note ? ` · ${tx.note}` : ''}
                 </span>
