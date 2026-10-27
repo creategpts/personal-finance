@@ -184,10 +184,39 @@ def test_extend_to_today_noop_on_empty_series():
     assert investment_logic.extend_to_today([], date(2026, 3, 15)) == []
 
 
-def test_allocation_matches_within_rounding_tolerance():
-    assert investment_logic.allocation_matches(pending=1000.0, allocated=999.99) is True
-    assert investment_logic.allocation_matches(pending=1000.0, allocated=1000.01) is True
-    assert investment_logic.allocation_matches(pending=1000.0, allocated=950.0) is False
+def test_monthly_movement_date_is_29th_or_last_day():
+    assert investment_logic.monthly_movement_date(2026, 10) == date(2026, 10, 29)
+    assert investment_logic.monthly_movement_date(2026, 2) == date(2026, 2, 28)
+    assert investment_logic.monthly_movement_date(2028, 2) == date(2028, 2, 29)
+
+
+def test_monthly_movement_direction_follows_net_sign():
+    assert investment_logic.monthly_movement(500.0, "CAR", "CV") == ("CAR", "CV", 500.0)
+    assert investment_logic.monthly_movement(-120.0, "CAR", "CV") == ("CV", "CAR", 120.0)
+    assert investment_logic.monthly_movement(0.0, "CAR", "CV") is None
+    assert investment_logic.monthly_movement(0.001, "CAR", "CV") is None
+
+
+def test_holding_value_on_uses_known_price_then_current():
+    txs = [tx(10, 100.0, date(2026, 1, 10)), tx(5, 60.0, date(2026, 3, 10))]
+    prices = [(date(2026, 1, 31), 12.0), (date(2026, 2, 28), 14.0)]
+    today = date(2026, 4, 15)
+    f = lambda d: investment_logic.holding_value_on("fund", txs, prices, 20.0, d, today)
+    assert f(date(2026, 1, 5)) == 0.0                # aún sin participaciones
+    assert f(date(2026, 2, 28)) == 10 * 14.0         # último precio conocido <= d
+    assert f(date(2026, 3, 31)) == 15 * 14.0         # 5 participaciones nuevas, mismo precio conocido
+    assert f(date(2026, 4, 15)) == 15 * 20.0         # hoy: precio actual
+
+
+def test_holding_value_on_balance_sums_everything():
+    txs = [tx(0.0, 1000.0, date(2026, 1, 1)), tx(0.0, 30.0, date(2026, 2, 1), kind="adjustment")]
+    assert investment_logic.holding_value_on("balance", txs, [], 0.0, date(2026, 2, 15), date(2026, 3, 1)) == 1030.0
+
+
+def test_revalorization_direction():
+    assert investment_logic.revalorization_movement(80.0, "Reval", "Deval", "CV") == ("Reval", "CV", 80.0)
+    assert investment_logic.revalorization_movement(-30.0, "Reval", "Deval", "CV") == ("CV", "Deval", 30.0)
+    assert investment_logic.revalorization_movement(0.0, "Reval", "Deval", "CV") is None
 
 
 if __name__ == "__main__":

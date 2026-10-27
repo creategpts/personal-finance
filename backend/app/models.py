@@ -170,8 +170,7 @@ class Investment(Base):
     """A holding tracked for the Panel de inversión (fondo indexado, fondo de
     inversión, criptomoneda, MMPP). capital invertido and rentabilidad are
     derived from its own transactions, not from Movimientos — account just
-    scopes it to the Cuenta (type='inversion') the money for it sits in,
-    linking it to the general ledger for the pending-assignment flow."""
+    scopes it to the Cuenta (type='inversion') the money for it sits in."""
 
     __tablename__ = "investments"
 

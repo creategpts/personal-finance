@@ -288,19 +288,6 @@ export interface PortfolioHistoryPoint {
   valor_actual: number
 }
 
-export interface AccountCheckItem {
-  account: string
-  net_moved: number
-  contributed: number
-  difference: number
-}
-
-export interface PendingAllocation {
-  investment_id: number
-  amount: number
-  price?: number | null
-}
-
 function sessionTokenFromBetaSdkActualShape(data: unknown): string | undefined {
   return (data as { session?: { token?: string } } | null)?.session?.token
 }
@@ -457,12 +444,6 @@ export const api = {
       request<PriceRefreshResult>(`/investments/${id}/refresh-price`, { method: 'POST' }),
     refreshAllPrices: () => request<PriceRefreshResult[]>('/investments/refresh-prices', { method: 'POST' }),
     priceLookup: (isin: string) => request<PriceLookupResult>(`/investments/price-lookup?isin=${encodeURIComponent(isin)}`),
-    accountCheck: () => request<AccountCheckItem[]>('/investments/account-check'),
-    assignPending: (account: string, data: { date: string; allocations: PendingAllocation[] }) =>
-      request<AccountCheckItem[]>(`/investments/account-check/${encodeURIComponent(account)}/assign`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
     history: (type?: InvestmentType) =>
       request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),
     historyFor: (id: number) => request<PortfolioHistoryPoint[]>(`/investments/${id}/history`),

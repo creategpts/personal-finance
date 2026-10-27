@@ -6,6 +6,7 @@ import InversionDashboard from '../components/InversionDashboard'
 import InversionOportunidades from '../components/InversionOportunidades'
 import InversionDetalle from '../components/InversionDetalle'
 import InversionPlan from '../components/InversionPlan'
+import InversionAjustes from '../components/InversionAjustes'
 import Modal from '../components/Modal'
 import { useHideAmounts } from '../hideAmounts'
 
@@ -13,14 +14,14 @@ export default function Inversion() {
   const hideAmounts = useHideAmounts()
   const queryClient = useQueryClient()
   const [showPlan, setShowPlan] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const { data: investments = [] } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const { data: summary = null } = useQuery({ queryKey: ['investments-summary'], queryFn: () => api.investments.summary() })
-  const { data: accountCheck = [] } = useQuery({ queryKey: ['investments-account-check'], queryFn: () => api.investments.accountCheck() })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
   const investmentAccounts = categories.filter((c) => c.type === 'inversion')
+  const allAccounts = categories.filter((c) => c.type === 'ahorro' || c.type === 'gasto' || c.type === 'inversion')
   const [editing, setEditing] = useState<Investment | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [prefillAccount, setPrefillAccount] = useState<string | undefined>(undefined)
   const [refreshingAll, setRefreshingAll] = useState(false)
 
   async function refresh() {
@@ -28,7 +29,6 @@ export default function Inversion() {
       queryClient.invalidateQueries({ queryKey: ['investments'] }),
       queryClient.invalidateQueries({ queryKey: ['investments-summary'] }),
       queryClient.invalidateQueries({ queryKey: ['investments-composition'] }),
-      queryClient.invalidateQueries({ queryKey: ['investments-account-check'] }),
     ])
   }
 
@@ -40,7 +40,6 @@ export default function Inversion() {
     }
     setShowModal(false)
     setEditing(null)
-    setPrefillAccount(undefined)
     await refresh()
   }
 
@@ -81,13 +80,15 @@ export default function Inversion() {
           <button onClick={() => setShowPlan(true)} className="btn">
             Plan de inversión
           </button>
+          <button onClick={() => setShowSettings(true)} className="btn">
+            Ajustes
+          </button>
           <button onClick={handleRefreshAll} disabled={refreshingAll} className="btn">
             {refreshingAll ? 'Actualizando…' : 'Actualizar precios (FT)'}
           </button>
           <button
             onClick={() => {
               setEditing(null)
-              setPrefillAccount(undefined)
               setShowModal(true)
             }}
             className="btn-primary"
@@ -97,23 +98,11 @@ export default function Inversion() {
         </div>
       </div>
 
-      <InversionDashboard
-        investments={investments}
-        summary={summary}
-        accountCheck={accountCheck}
-        hideAmounts={hideAmounts}
-        onAssigned={refresh}
-        onCreateForAccount={(account) => {
-          setEditing(null)
-          setPrefillAccount(account)
-          setShowModal(true)
-        }}
-      />
+      <InversionDashboard summary={summary} hideAmounts={hideAmounts} />
 
       <div className="mt-8">
         <InversionOportunidades
           syncIds={investments.filter((i) => i.active && i.type !== 'seguros' && i.type !== 'roboadvisor' && (i.ft_symbol || i.isin)).map((i) => i.id)}
-          accounts={categories.filter((c) => c.type === 'ahorro')}
           hideAmounts={hideAmounts}
         />
         <InversionDetalle
@@ -130,15 +119,23 @@ export default function Inversion() {
         <InvestmentModal
           initial={editing}
           accounts={investmentAccounts}
-          initialAccount={prefillAccount}
           onClose={() => {
             setShowModal(false)
             setEditing(null)
-            setPrefillAccount(undefined)
           }}
           onSave={handleSave}
           onDelete={editing ? handleDelete : undefined}
           onRefreshPrice={editing && (editing.ft_symbol || editing.isin) ? () => refreshPriceFor(editing.id) : undefined}
+        />
+      )}
+
+      {showSettings && (
+        <InversionAjustes
+          savingAccounts={categories.filter((c) => c.type === 'ahorro')}
+          allAccounts={allAccounts}
+          incomeCategories={categories.filter((c) => c.type === 'income')}
+          expenseCategories={categories.filter((c) => c.type === 'expense')}
+          onClose={() => setShowSettings(false)}
         />
       )}
 

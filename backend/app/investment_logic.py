@@ -4,6 +4,9 @@ Cost basis uses the weighted-average-cost method: a buy (units>0) folds its
 amount into the running average; a sell (units<0) only reduces units held,
 leaving avg_cost unchanged (standard average-cost behavior)."""
 
+import calendar
+from datetime import date
+
 
 def holding_stats(current_price: float, transactions) -> dict:
     """transactions: iterable of objects with .units and .amount, oldest first."""
@@ -66,11 +69,43 @@ def holding_stats_for(investment) -> dict:
     return holding_stats(investment.current_price, investment.transactions)
 
 
-def allocation_matches(pending: float, allocated: float, tolerance: float = 0.01) -> bool:
-    """Whether a pending-assignment split accounts for the full pending amount,
-    within rounding tolerance (splitting cents across holdings can leave a 0.01
-    residual)."""
-    return abs(allocated - pending) <= tolerance
+MOVEMENT_DAY = 29
+
+
+def monthly_movement_date(year: int, month: int) -> date:
+    """Día 29 del mes; el último día si el mes no llega (febrero)."""
+    return date(year, month, min(MOVEMENT_DAY, calendar.monthrange(year, month)[1]))
+
+
+def monthly_movement(net: float, origin: str, destination: str, tolerance: float = 0.005):
+    """Movimiento (origen, destino, importe) que refleja el neto de aportaciones del mes.
+    Un neto negativo (más ventas que compras) invierte el sentido; ~0 no genera movimiento."""
+    if abs(net) < tolerance:
+        return None
+    return (origin, destination, net) if net > 0 else (destination, origin, -net)
+
+
+def holding_value_on(kind, transactions, prices, current_price, d, today) -> float:
+    """Valor de una holding el día d. kind "fund" o "balance" (seguros: la suma corriente ES el valor).
+    prices: (fecha, precio) ordenado, mezcla de histórico y lecturas propias. Sin precio conocido
+    hasta d (o d >= hoy) se usa current_price, así que una holding sin histórico no genera revalorización."""
+    if kind == "balance":
+        return sum(t.amount for t in transactions if t.date <= d)
+    units = sum(t.units for t in transactions if t.date <= d)
+    price = current_price
+    if d < today:
+        known = [p for pd, p in prices if pd <= d]
+        if known:
+            price = known[-1]
+    return units * price if units > 1e-9 else 0.0
+
+
+def revalorization_movement(delta: float, reval_category: str, deval_category: str, account: str, tolerance: float = 0.005):
+    """Movimiento (origen, destino, importe) que lleva el saldo de la cuenta al valor real:
+    ganancia = Revalorización -> cuenta; pérdida = cuenta -> Devaluación. ~0 no genera movimiento."""
+    if abs(delta) < tolerance:
+        return None
+    return (reval_category, account, delta) if delta > 0 else (account, deval_category, -delta)
 
 
 def portfolio_summary(stats_list: list[dict]) -> dict:

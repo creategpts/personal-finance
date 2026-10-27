@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type Category, type MarketFund } from '../api'
-import { saveSettings, useSettings } from '../settings'
-import Modal from './Modal'
+import { api, type MarketFund } from '../api'
+import { useSettings } from '../settings'
 import Money from './Money'
 
 const AXIS_COLOR = '#a3a3a3'
@@ -46,7 +45,7 @@ function store(key: string, value: unknown) {
   }
 }
 
-function parseLevels(raw: string): number[] {
+export function parseLevels(raw: string): number[] {
   const levels = raw
     .split(',')
     .map((s) => parseFloat(s.trim().replace(',', '.')))
@@ -83,11 +82,9 @@ function shortDate(iso: string) {
 
 export default function InversionOportunidades({
   syncIds,
-  accounts,
   hideAmounts,
 }: {
   syncIds: number[]
-  accounts: Category[]
   hideAmounts: boolean
 }) {
   const queryClient = useQueryClient()
@@ -97,7 +94,6 @@ export default function InversionOportunidades({
   const [shown, setShown] = useState<Record<RefKey, boolean>>(() => stored('dip_lines', { high_52w: true, all_time_high: true, avg_cost: true }))
   const [rangeLabel, setRangeLabel] = useState<string>(() => stored('dip_range', '1A'))
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [configuring, setConfiguring] = useState(false)
 
   const { data: market } = useQuery({ queryKey: ['investments-market'], queryFn: () => api.investments.market() })
 
@@ -140,9 +136,6 @@ export default function InversionOportunidades({
             {' · '}los fondos publican un valor liquidativo al día
           </p>
         </div>
-        <button className="btn" onClick={() => setConfiguring(true)}>
-          Ajustes
-        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-px border-b border-line bg-line sm:grid-cols-3">
@@ -223,8 +216,6 @@ export default function InversionOportunidades({
           {selected && <FundChart fund={selected} shown={shown} setShown={setShown} rangeLabel={rangeLabel} setRangeLabel={setRangeLabel} />}
         </div>
       )}
-
-      {configuring && <OportunidadesSettings accounts={accounts} onClose={() => setConfiguring(false)} />}
     </div>
   )
 }
@@ -296,61 +287,5 @@ function FundChart({
         </ResponsiveContainer>
       </div>
     </div>
-  )
-}
-
-function OportunidadesSettings({ accounts, onClose }: { accounts: Category[]; onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const settings = useSettings()
-  const [account, setAccount] = useState(settings.liquidity_account)
-  const [emergency, setEmergency] = useState(settings.emergency_fund)
-  const [levels, setLevels] = useState(settings.dip_levels)
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    await saveSettings({
-      liquidity_account: account,
-      emergency_fund: String(parseFloat(emergency.replace(',', '.')) || 0),
-      dip_levels: parseLevels(levels).join(','),
-    })
-    await queryClient.invalidateQueries({ queryKey: ['investments-market'] })
-    onClose()
-  }
-
-  return (
-    <Modal
-      title="Ajustes de oportunidades"
-      size="sm"
-      onClose={onClose}
-      onSubmit={handleSubmit}
-      headerAction={
-        <button type="submit" className="btn-primary">
-          Guardar
-        </button>
-      }
-    >
-      <div className="space-y-4">
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs font-medium text-muted">Cuenta de liquidez</span>
-          <select className="input" value={account} onChange={(e) => setAccount(e.target.value)}>
-            <option value="">— Ninguna —</option>
-            {accounts.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs font-medium text-muted">Fondo de emergencia (€ que no se toca)</span>
-          <input className="input" inputMode="decimal" value={emergency} onChange={(e) => setEmergency(e.target.value)} />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs font-medium text-muted">Niveles de caída (%), de menor a mayor</span>
-          <input className="input" value={levels} onChange={(e) => setLevels(e.target.value)} placeholder="5, 10, 20" />
-          <span className="mt-1 block text-xs text-faint">Atención → Comprar → Comprar fuerte, según la referencia elegida.</span>
-        </label>
-      </div>
-    </Modal>
   )
 }

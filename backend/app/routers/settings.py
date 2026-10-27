@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -24,5 +26,15 @@ def put_settings(payload: dict[str, str], db: Session = Depends(get_db)) -> dict
             setting.value = value
         else:
             db.add(models.Setting(key=key, value=value))
+    # El movimiento mensual de inversión cuenta desde el día en que se configuran las dos cuentas;
+    # volver a guardarlas no mueve esa fecha.
+    db.flush()
+    current = _all(db)
+    if (
+        current.get("investment_origin_account")
+        and current.get("investment_destination_account")
+        and "investment_movement_start" not in current
+    ):
+        db.add(models.Setting(key="investment_movement_start", value=date.today().isoformat()))
     db.commit()
     return _all(db)

@@ -3,9 +3,8 @@ from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import ft_price, investment_logic, models, schemas
+from .. import ft_price, investment_logic, investment_movements, models, schemas
 from ..database import get_db
-from ..kpi_logic import _is_valuation_adjustment, category_name_sets
 from .account_values import _live_balance
 
 router = APIRouter(prefix="/api/investments", tags=["investments"])
@@ -103,7 +102,11 @@ def update_investment(investment_id: int, payload: schemas.InvestmentUpdate, db:
 @router.delete("/{investment_id}", status_code=204)
 def delete_investment(investment_id: int, db: Session = Depends(get_db)):
     inv = _get(db, investment_id)
+    months = {(t.date.year, t.date.month) for t in inv.transactions}
     db.delete(inv)  # cascade deletes its transactions
+    db.flush()
+    for year, month in months:
+        investment_movements.sync_month(db, year, month)
     db.commit()
 
 
@@ -115,6 +118,8 @@ def add_transaction(investment_id: int, payload: schemas.InvestmentTransactionCr
             date=payload.date, units=payload.units, amount=payload.amount, kind=payload.kind, note=payload.note
         )
     )
+    db.flush()
+    investment_movements.sync_month(db, payload.date.year, payload.date.month)
     db.commit()
     db.refresh(inv)
     return _serialize(inv)
@@ -128,11 +133,15 @@ def update_transaction(
     tx = db.get(models.InvestmentTransaction, transaction_id)
     if not tx or tx.investment_id != investment_id:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    months = {(tx.date.year, tx.date.month), (payload.date.year, payload.date.month)}
     tx.date = payload.date
     tx.units = payload.units
     tx.amount = payload.amount
     tx.kind = payload.kind
     tx.note = payload.note
+    db.flush()
+    for year, month in months:
+        investment_movements.sync_month(db, year, month)
     db.commit()
     db.refresh(inv)
     return _serialize(inv)
@@ -144,7 +153,10 @@ def delete_transaction(investment_id: int, transaction_id: int, db: Session = De
     tx = db.get(models.InvestmentTransaction, transaction_id)
     if not tx or tx.investment_id != investment_id:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    year, month = tx.date.year, tx.date.month
     db.delete(tx)
+    db.flush()
+    investment_movements.sync_month(db, year, month)
     db.commit()
     db.refresh(inv)
     return _serialize(inv)
@@ -163,6 +175,8 @@ def refresh_price(investment_id: int, db: Session = Depends(get_db)):
     inv.current_price = price
     inv.price_updated_at = datetime.utcnow()
     _record_snapshot(inv, price)
+    db.flush()
+    investment_movements.sync_current_month_revalorization(db)
     db.commit()
     return schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price)
 
@@ -183,6 +197,8 @@ def refresh_all_prices(db: Session = Depends(get_db)):
         inv.price_updated_at = datetime.utcnow()
         _record_snapshot(inv, price)
         results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price))
+    db.flush()
+    investment_movements.sync_current_month_revalorization(db)
     db.commit()
     return results
 
@@ -217,6 +233,8 @@ def sync_market(investment_id: int, db: Session = Depends(get_db)):
     _record_snapshot(inv, price)
     known = {d for (d,) in db.query(models.PriceHistory.date).filter(models.PriceHistory.investment_id == inv.id, models.PriceHistory.date >= start)}
     db.add_all(models.PriceHistory(investment_id=inv.id, date=d, price=p) for d, p in rows if d not in known)
+    db.flush()
+    investment_movements.sync_current_month_revalorization(db)
     db.commit()
     return schemas.MarketSyncResult(investment_id=inv.id, ok=True)
 
@@ -277,97 +295,6 @@ def composition(db: Session = Depends(get_db)):
     investments = db.query(models.Investment).filter(models.Investment.active.is_(True)).all()
     pairs = [(inv, investment_logic.holding_stats_for(inv)) for inv in investments]
     return investment_logic.composition(pairs)
-
-
-def _is_adjustment(name: str, names: dict[str, set[str]]) -> bool:
-    """A valuation adjustment (Revalorización/Devaluación), or an origin/destination
-    that isn't a recognized category or account at all — e.g. "New Asset", a
-    one-off bootstrap entry from a category since renamed or deleted. Neither
-    represents real capital that needs reconciling against a fund purchase."""
-    if _is_valuation_adjustment(name, names):
-        return True
-    known = names["income_all"] | names["expense_all"] | names["saving"] | names["investment"] | names["gasto"]
-    return name not in known
-
-
-def _tracking_start(db: Session) -> date:
-    """Fixed epoch, not a rolling window: everything before it is permanently
-    ignored by account_check, whatever it is — "empezamos a contar desde
-    ahora". Self-initializes to today on first call, then never moves."""
-    setting = db.get(models.Setting, "investment_tracking_start")
-    if setting:
-        return date.fromisoformat(setting.value)
-    today = date.today()
-    db.add(models.Setting(key="investment_tracking_start", value=today.isoformat()))
-    db.commit()
-    return today
-
-
-def _account_check_item(db: Session, account: str, names: dict[str, set[str]], cutoff: date) -> schemas.AccountCheckItem | None:
-    done_movements = (
-        db.query(models.Movement)
-        .filter(
-            models.Movement.status == models.MovementStatus.done,
-            models.Movement.date >= cutoff,
-            (models.Movement.destination == account) | (models.Movement.origin == account),
-        )
-        .all()
-    )
-    investment_ids = [inv.id for inv in db.query(models.Investment).filter(models.Investment.account == account)]
-    transactions = (
-        db.query(models.InvestmentTransaction)
-        .filter(models.InvestmentTransaction.investment_id.in_(investment_ids), models.InvestmentTransaction.date >= cutoff)
-        .all()
-        if investment_ids
-        else []
-    )
-
-    net_moved = sum(
-        m.amount for m in done_movements if m.destination == account and not _is_adjustment(m.origin, names)
-    ) - sum(
-        m.amount for m in done_movements if m.origin == account and not _is_adjustment(m.destination, names)
-    )
-    contributed = sum(t.amount for t in transactions)
-    if net_moved == 0 and contributed == 0:
-        return None
-    return schemas.AccountCheckItem(account=account, net_moved=net_moved, contributed=contributed, difference=net_moved - contributed)
-
-
-@router.get("/account-check", response_model=list[schemas.AccountCheckItem])
-def account_check(db: Session = Depends(get_db)):
-    names = category_name_sets(db)
-    cutoff = _tracking_start(db)
-    inversion_accounts = [c.name for c in db.query(models.Category).filter(models.Category.type == "inversion").all()]
-    items = (_account_check_item(db, account, names, cutoff) for account in inversion_accounts)
-    return [item for item in items if item is not None]
-
-
-@router.post("/account-check/{account}/assign", response_model=list[schemas.AccountCheckItem])
-def assign_pending(account: str, payload: schemas.AssignPendingRequest, db: Session = Depends(get_db)):
-    names = category_name_sets(db)
-    cutoff = _tracking_start(db)
-    item = _account_check_item(db, account, names, cutoff)
-    if item is None or abs(item.difference) < 0.01:
-        raise HTTPException(status_code=400, detail="Nada pendiente de asignar en esta cuenta")
-
-    total_allocated = sum(a.amount for a in payload.allocations)
-    if not investment_logic.allocation_matches(item.difference, total_allocated):
-        raise HTTPException(status_code=422, detail="El reparto no cuadra con el importe pendiente")
-
-    active_by_id = {
-        inv.id: inv
-        for inv in db.query(models.Investment).filter(models.Investment.account == account, models.Investment.active.is_(True))
-    }
-    for alloc in payload.allocations:
-        inv = active_by_id.get(alloc.investment_id)
-        if not inv:
-            raise HTTPException(status_code=422, detail=f"La inversión {alloc.investment_id} no es una holding activa de {account}")
-        is_lump_sum = inv.type == "seguros"
-        units = 0.0 if is_lump_sum else (alloc.amount / alloc.price if alloc.price else 0.0)
-        inv.transactions.append(models.InvestmentTransaction(date=payload.date, units=units, amount=alloc.amount, kind="flow"))
-
-    db.commit()
-    return account_check(db)
 
 
 @router.get("/history", response_model=list[schemas.PortfolioHistoryPoint])

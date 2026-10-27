@@ -200,6 +200,20 @@ export default function InvestmentLedger() {
 
   const lumpSum = investment.type === 'seguros'
   const sorted = [...investment.transactions].sort((a, b) => b.date.localeCompare(a.date))
+  const blur = hideAmounts ? 'select-none blur-sm' : ''
+  const gainColor = investment.stats.plusvalia < 0 ? 'text-red-600' : 'text-emerald-600'
+  // Same figures as the row in the Inversión tables; actual weight is relative to the
+  // active holdings of the same type, as in the table.
+  const sameType = (investments ?? []).filter((i) => i.active && i.type === investment.type)
+  const typeTotal = sameType.reduce((sum, i) => sum + i.stats.valor_actual, 0)
+  const showWeights = investment.type === 'fondo_inversion'
+  // Aportación (+) o retirada (−) en este fondo, solo en él, para que su peso entre los fondos activos
+  // llegue al objetivo: (v + x) / (T + x) = w  →  x = (w·T − v) / (1 − w).
+  const targetFraction = investment.target_weight / 100
+  const rebalanceAmount =
+    showWeights && investment.active && typeTotal > 0 && targetFraction > 0 && targetFraction < 1
+      ? (targetFraction * typeTotal - investment.stats.valor_actual) / (1 - targetFraction)
+      : null
 
   return (
     <div>
@@ -208,6 +222,50 @@ export default function InvestmentLedger() {
       </button>
       <h1 className={`${investment.isin ? 'mb-1' : 'mb-5'} text-2xl font-semibold tracking-tight`}>{investment.name}</h1>
       {investment.isin && <p className="mb-5 text-sm text-muted">{investment.isin}</p>}
+
+      <div className="card mb-5 grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
+        {!lumpSum && <Fact label="Participaciones">{investment.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</Fact>}
+        <Fact label={lumpSum ? 'Total aportado' : 'Total invertido'}>
+          <Money value={investment.stats.total_invertido} className={blur} />
+        </Fact>
+        {!lumpSum && (
+          <Fact label="Precio medio">
+            <Money value={investment.stats.avg_cost} className={blur} />
+          </Fact>
+        )}
+        {!lumpSum && (
+          <Fact label="Valor liquidativo">
+            <Money value={investment.current_price} className={blur} />
+          </Fact>
+        )}
+        <Fact label="Valor de mercado">
+          <Money value={investment.stats.valor_actual} className={blur} />
+        </Fact>
+        {showWeights && <Fact label="Peso objetivo">{investment.target_weight.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%</Fact>}
+        {showWeights && (
+          <Fact label="Peso actual">
+            {investment.active && typeTotal > 0 ? `${((investment.stats.valor_actual / typeTotal) * 100).toFixed(1)}%` : '—'}
+          </Fact>
+        )}
+        {rebalanceAmount !== null && (
+          <Fact label="Ajuste al peso objetivo">
+            {Math.abs(rebalanceAmount) < 0.005 ? (
+              'En objetivo'
+            ) : (
+              <>
+                {rebalanceAmount > 0 ? 'Aportar ' : 'Retirar '}
+                <Money value={Math.abs(rebalanceAmount)} className={blur} />
+              </>
+            )}
+          </Fact>
+        )}
+        <Fact label="Plusvalía" className={gainColor}>
+          <Money value={investment.stats.plusvalia} className={blur} />
+        </Fact>
+        <Fact label="Rentabilidad" className={gainColor}>
+          {investment.stats.rentabilidad.toFixed(2)}%
+        </Fact>
+      </div>
 
       <div className="mb-5 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <div className="card h-full space-y-5 p-5">
@@ -289,6 +347,15 @@ export default function InvestmentLedger() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function Fact({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-medium text-muted">{label}</div>
+      <div className={`num mt-1 text-lg font-semibold tracking-tight ${className ?? 'text-fg'}`}>{children}</div>
     </div>
   )
 }
