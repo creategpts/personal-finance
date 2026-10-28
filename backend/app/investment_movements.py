@@ -22,6 +22,7 @@ def _started(db: Session, settings: dict[str, str]) -> date:
     if not started:  # cuentas guardadas antes de existir la fecha de inicio: empieza hoy
         started = date.today().isoformat()
         db.add(models.Setting(key="investment_movement_start", value=started))
+        db.flush()  # sin autoflush, la segunda sincronización del mismo cambio no la vería y la insertaría otra vez
     return date.fromisoformat(started)
 
 
