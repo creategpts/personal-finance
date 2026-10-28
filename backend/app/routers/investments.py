@@ -83,7 +83,7 @@ def create_investment(payload: schemas.InvestmentCreate, db: Session = Depends(g
     if (payload.ft_symbol or isin) and payload.type not in ("seguros", "roboadvisor"):
         try:
             if payload.ft_symbol:
-                symbol, price = payload.ft_symbol, ft_price.fetch_ft_price(payload.ft_symbol)
+                symbol, price = payload.ft_symbol, ft_price.fetch_ft_price_eur(payload.ft_symbol)
             else:
                 symbol, price = ft_price.lookup_isin(isin)
         except Exception:
@@ -190,7 +190,7 @@ def refresh_price(investment_id: int, db: Session = Depends(get_db)):
     if not symbol:
         raise HTTPException(status_code=422, detail="Este holding no tiene ISIN ni símbolo FT configurado")
     try:
-        price = ft_price.fetch_ft_price(symbol)
+        price = ft_price.fetch_ft_price_eur(symbol)
     except Exception as e:
         return schemas.PriceRefreshResult(investment_id=inv.id, ok=False, error=str(e))
     inv.current_price = price
@@ -210,7 +210,7 @@ def refresh_all_prices(db: Session = Depends(get_db)):
         if not symbol:
             continue
         try:
-            price = ft_price.fetch_ft_price(symbol)
+            price = ft_price.fetch_ft_price_eur(symbol)
         except Exception as e:
             results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=False, error=str(e)))
             continue
@@ -239,14 +239,22 @@ def sync_market(investment_id: int, db: Session = Depends(get_db)):
     symbol = ft_price.symbol_for(inv.ft_symbol, inv.isin)
     if not symbol:
         return schemas.MarketSyncResult(investment_id=inv.id, ok=False, error="Sin ISIN ni símbolo FT")
+    # Los fondos que no cotizan en EUR guardaban su histórico en su moneda: se rehace una vez, ya en euros.
+    marker = f"ft_eur_history_{inv.id}"
+    if ft_price.currency_of(symbol) != "EUR" and db.get(models.Setting, marker) is None:
+        db.query(models.PriceHistory).filter_by(investment_id=inv.id).delete()
+        db.query(models.PriceSnapshot).filter_by(investment_id=inv.id).delete()
+        db.add(models.Setting(key=marker, value="1"))
+        db.flush()
+        inv.price_updated_at = None  # sin esto el límite de 10 min se saltaría la descarga
     last = db.query(models.PriceHistory.date).filter_by(investment_id=inv.id).order_by(models.PriceHistory.date.desc()).first()
     if last and inv.price_updated_at and datetime.utcnow() - inv.price_updated_at < SYNC_THROTTLE:
         return schemas.MarketSyncResult(investment_id=inv.id, ok=True, skipped=True)
     today = date.today()
     start = last[0] + timedelta(days=1) if last else today.replace(year=today.year - HISTORY_YEARS)
     try:
-        price = ft_price.fetch_ft_price(symbol)
-        rows = ft_price.fetch_ft_history(symbol, start, today) if start <= today else []
+        price = ft_price.fetch_ft_price_eur(symbol)
+        rows = ft_price.fetch_ft_history_eur(symbol, start, today) if start <= today else []
     except Exception as e:
         return schemas.MarketSyncResult(investment_id=inv.id, ok=False, error=str(e))
     inv.current_price = price

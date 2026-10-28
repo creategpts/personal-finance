@@ -8,7 +8,7 @@ markup any time and break this — if it does, fall back to entering the price
 manually on the holding (current_price is always editable)."""
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import requests
 from lxml import html
@@ -39,15 +39,15 @@ def search_symbol(isin: str) -> str | None:
 
 
 def lookup_isin(isin: str) -> tuple[str, float]:
-    """(símbolo, precio) de un ISIN: prueba ISIN:EUR y, si FT no lo tiene, el que devuelva su buscador."""
+    """(símbolo, precio en EUR) de un ISIN: prueba ISIN:EUR y, si FT no lo tiene, el que devuelva su buscador."""
     symbol = f"{isin}:EUR"
     try:
-        return symbol, fetch_ft_price(symbol)
+        return symbol, fetch_ft_price_eur(symbol)
     except Exception:
         found = search_symbol(isin)
         if not found or found == symbol:
             raise
-        return found, fetch_ft_price(found)
+        return found, fetch_ft_price_eur(found)
 
 
 def fetch_ft_price(symbol: str) -> float:
@@ -68,18 +68,10 @@ FT_HISTORY_PAGE = "https://markets.ft.com/data/funds/tearsheet/historical?s={sym
 FT_HISTORY_AJAX = "https://markets.ft.com/data/equities/ajax/get-historical-prices"
 
 
-def fetch_ft_history(symbol: str, start: date, end: date) -> list[tuple[date, float]]:
-    """Daily closes between start and end, oldest first. FT's historical table is
-    loaded via an ajax endpoint keyed by an internal xid, which only the tearsheet
-    page reveals — hence the two requests. Same fragility caveat as fetch_ft_price."""
-    page = requests.get(FT_HISTORY_PAGE.format(symbol=symbol), headers=_HEADERS, timeout=10)
-    page.raise_for_status()
-    m = re.search(r"&quot;xid&quot;:&quot;(\d+)&quot;", page.text)
-    if not m:
-        raise ValueError(f"No se encontró el id interno FT para '{symbol}'")
+def _ajax_history(xid: str, start: date, end: date) -> list[tuple[date, float]]:
     resp = requests.get(
         FT_HISTORY_AJAX,
-        params={"startDate": start.strftime("%Y/%m/%d"), "endDate": end.strftime("%Y/%m/%d"), "symbol": m.group(1)},
+        params={"startDate": start.strftime("%Y/%m/%d"), "endDate": end.strftime("%Y/%m/%d"), "symbol": xid},
         headers=_HEADERS,
         timeout=20,
     )
@@ -95,3 +87,61 @@ def fetch_ft_history(symbol: str, start: date, end: date) -> list[tuple[date, fl
         close = float(re.sub(r"[^\d.]", "", cells[4].text_content().replace(",", "")))
         out.append((day, close))
     return sorted(out)
+
+
+def fetch_ft_history(symbol: str, start: date, end: date) -> list[tuple[date, float]]:
+    """Daily closes between start and end, oldest first. FT's historical table is
+    loaded via an ajax endpoint keyed by an internal xid, which only the tearsheet
+    page reveals — hence the two requests. Same fragility caveat as fetch_ft_price."""
+    page = requests.get(FT_HISTORY_PAGE.format(symbol=symbol), headers=_HEADERS, timeout=10)
+    page.raise_for_status()
+    m = re.search(r"&quot;xid&quot;:&quot;(\d+)&quot;", page.text)
+    if not m:
+        raise ValueError(f"No se encontró el id interno FT para '{symbol}'")
+    return _ajax_history(m.group(1), start, end)
+
+
+# --- Fondos que no cotizan en EUR: el precio se convierte a euros con el cambio de FT.
+# ponytail: el spot trae 4 decimales pero el histórico de divisas de FT viene redondeado a 2
+# (error de hasta ~0,5% por día en los precios históricos de esos fondos). Si ese ruido molesta,
+# cambiar fetch_fx_history por otra fuente (p. ej. BCE) sin tocar el resto.
+FT_FX_SUMMARY = "https://markets.ft.com/data/currencies/tearsheet/summary?s={pair}"
+
+
+def currency_of(symbol: str) -> str:
+    return symbol.rsplit(":", 1)[1].upper() if ":" in symbol else "EUR"
+
+
+def fetch_fx_rate(currency: str) -> float:
+    """Unidades de `currency` por 1 EUR (FT: EURUSD = 1.11)."""
+    return fetch_ft_price(f"EUR{currency}")
+
+
+def fetch_fx_history(currency: str, start: date, end: date) -> list[tuple[date, float]]:
+    page = requests.get(FT_FX_SUMMARY.format(pair=f"EUR{currency}"), headers=_HEADERS, timeout=10)
+    page.raise_for_status()
+    m = re.search(r"&quot;xid&quot;:&quot;(\d+)&quot;", page.text)
+    if not m:
+        raise ValueError(f"No se encontró el id interno FT para EUR{currency}")
+    return _ajax_history(m.group(1), start, end)
+
+
+def fetch_ft_price_eur(symbol: str) -> float:
+    price = fetch_ft_price(symbol)
+    currency = currency_of(symbol)
+    return price if currency == "EUR" else price / fetch_fx_rate(currency)
+
+
+def fetch_ft_history_eur(symbol: str, start: date, end: date) -> list[tuple[date, float]]:
+    rows = fetch_ft_history(symbol, start, end)
+    currency = currency_of(symbol)
+    if currency == "EUR" or not rows:
+        return rows
+    rates = fetch_fx_history(currency, start - timedelta(days=10), end)  # margen: fines de semana y festivos
+    if not rates:
+        raise ValueError(f"FT no devolvió tipos de cambio EUR{currency}")
+    out = []
+    for day, price in rows:
+        known = [r for d, r in rates if d <= day]
+        out.append((day, price / (known[-1] if known else rates[0][1])))
+    return out

@@ -36,6 +36,8 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
   const [currentPrice, setCurrentPrice] = useState(initial?.current_price?.toString() ?? '0')
   const [active, setActive] = useState(initial?.active ?? true)
   const [busy, setBusy] = useState(false)
+  // confirmación en la propia página: window.confirm no funciona en todos los navegadores integrados
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [lookupBusy, setLookupBusy] = useState(false)
   const [lookupError, setLookupError] = useState<string | null>(null)
 
@@ -93,13 +95,20 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
       }
       footer={
         onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-red-500 transition hover:text-red-700"
-          >
-            <TrashIcon /> Eliminar inversión
-          </button>
+          <div className="ml-auto flex items-center gap-3">
+            {confirmingDelete && (
+              <button type="button" onClick={() => setConfirmingDelete(false)} className="text-sm font-medium text-muted hover:text-fg">
+                Cancelar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => (confirmingDelete ? onDelete() : setConfirmingDelete(true))}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-red-500 transition hover:text-red-700"
+            >
+              <TrashIcon /> {confirmingDelete ? 'Confirmar: se borran sus aportaciones' : 'Eliminar inversión'}
+            </button>
+          </div>
         )
       }
     >
@@ -136,7 +145,7 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
               {!lookupBusy && lookupError && <span className="mt-1 block text-xs text-red-500">{lookupError}</span>}
               {!lookupBusy && !lookupError && ftSymbol && !ftSymbol.endsWith(':EUR') && (
                 <span className="mt-1 block text-xs text-amber-600">
-                  Cotiza en {ftSymbol.split(':')[1]}, no en EUR: el valor liquidativo se guardará en esa moneda.
+                  Cotiza en {ftSymbol.split(':')[1]}: el valor liquidativo se convierte a euros con el cambio de FT.
                 </span>
               )}
             </Field>

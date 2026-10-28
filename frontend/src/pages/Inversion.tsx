@@ -45,7 +45,6 @@ export default function Inversion() {
 
   async function handleDelete() {
     if (!editing) return
-    if (!confirm('¿Eliminar esta inversión y sus aportaciones?')) return
     await api.investments.remove(editing.id)
     setShowModal(false)
     setEditing(null)
