@@ -21,6 +21,35 @@ def symbol_for(ft_symbol: str | None, isin: str | None) -> str | None:
     return ft_symbol or (f"{isin}:EUR" if isin else None)
 
 
+FT_SEARCH = "https://markets.ft.com/data/searchapi/searchsecurities"
+
+
+def search_symbol(isin: str) -> str | None:
+    """Símbolo FT real de un ISIN (p. ej. 'IE00BDZVHT63:USD'): no todos cotizan en EUR.
+    Prefiere EUR y luego el listado principal."""
+    resp = requests.get(FT_SEARCH, params={"query": isin}, headers=_HEADERS, timeout=10)
+    resp.raise_for_status()
+    found = [
+        sec
+        for sec in resp.json().get("data", {}).get("security", [])
+        if sec.get("assetClass") == "Funds" and str(sec.get("symbol", "")).upper().startswith(isin.upper() + ":")
+    ]
+    found.sort(key=lambda sec: (not sec["symbol"].endswith(":EUR"), not sec.get("isPrimary")))
+    return found[0]["symbol"] if found else None
+
+
+def lookup_isin(isin: str) -> tuple[str, float]:
+    """(símbolo, precio) de un ISIN: prueba ISIN:EUR y, si FT no lo tiene, el que devuelva su buscador."""
+    symbol = f"{isin}:EUR"
+    try:
+        return symbol, fetch_ft_price(symbol)
+    except Exception:
+        found = search_symbol(isin)
+        if not found or found == symbol:
+            raise
+        return found, fetch_ft_price(found)
+
+
 def fetch_ft_price(symbol: str) -> float:
     resp = requests.get(FT_URL.format(symbol=symbol), headers=_HEADERS, timeout=10)
     resp.raise_for_status()

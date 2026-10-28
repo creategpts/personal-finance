@@ -29,6 +29,8 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
   const [name, setName] = useState(initial?.name ?? '')
   const [type, setType] = useState<InvestmentType>(initial?.type ?? 'fondo_inversion')
   const [isin, setIsin] = useState(initial?.isin ?? '')
+  // símbolo FT resuelto para el ISIN (no todos cotizan en EUR); se conserva al editar
+  const [ftSymbol, setFtSymbol] = useState<string | null>(initial?.ft_symbol ?? null)
   const [account, setAccount] = useState(initial?.account ?? accounts[0]?.name ?? '')
   const [targetWeight, setTargetWeight] = useState(initial?.target_weight?.toString() ?? '0')
   const [currentPrice, setCurrentPrice] = useState(initial?.current_price?.toString() ?? '0')
@@ -38,14 +40,18 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
   const [lookupError, setLookupError] = useState<string | null>(null)
 
   async function handleIsinBlur() {
-    if (!isin) return
+    const clean = isin.trim().toUpperCase()
+    setIsin(clean)
+    if (!clean) return
     setLookupBusy(true)
     setLookupError(null)
     try {
-      const result = await api.investments.priceLookup(isin)
+      const result = await api.investments.priceLookup(clean)
       if (result.ok && result.price != null) {
         setCurrentPrice(String(result.price))
+        setFtSymbol(result.symbol ?? null)
       } else {
+        setFtSymbol(null)
         setLookupError(result.error ?? 'No se pudo obtener el valor liquidativo')
       }
     } catch {
@@ -62,10 +68,10 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
       await onSave({
         name,
         type,
-        isin: isin || null,
+        isin: isin.trim().toUpperCase() || null,
         account: account || null,
         target_weight: Number(targetWeight),
-        ft_symbol: null,
+        ft_symbol: ftSymbol,
         active,
         current_price: Number(currentPrice),
       })
@@ -128,6 +134,11 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
               <input required className="input" value={isin} onChange={(e) => setIsin(e.target.value)} onBlur={handleIsinBlur} />
               {lookupBusy && <span className="mt-1 block text-xs text-faint">Buscando valor liquidativo…</span>}
               {!lookupBusy && lookupError && <span className="mt-1 block text-xs text-red-500">{lookupError}</span>}
+              {!lookupBusy && !lookupError && ftSymbol && !ftSymbol.endsWith(':EUR') && (
+                <span className="mt-1 block text-xs text-amber-600">
+                  Cotiza en {ftSymbol.split(':')[1]}, no en EUR: el valor liquidativo se guardará en esa moneda.
+                </span>
+              )}
             </Field>
           )}
         </div>

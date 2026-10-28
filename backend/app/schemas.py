@@ -325,6 +325,7 @@ class MarketOverview(BaseModel):
 class PriceLookupResult(BaseModel):
     ok: bool
     price: float | None = None
+    symbol: str | None = None  # símbolo FT resuelto, p. ej. "IE00BDZVHT63:USD"
     error: str | None = None
 
 

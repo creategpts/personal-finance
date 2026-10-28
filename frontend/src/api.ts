@@ -279,6 +279,7 @@ export interface MarketSyncResult {
 export interface PriceLookupResult {
   ok: boolean
   price: number | null
+  symbol?: string | null // símbolo FT resuelto, p. ej. IE00BDZVHT63:USD
   error: string | null
 }
 

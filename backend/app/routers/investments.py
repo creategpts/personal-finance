@@ -26,6 +26,11 @@ def _record_snapshot(inv: models.Investment, price: float) -> None:
         inv.snapshots.append(models.PriceSnapshot(date=today, price=price))
 
 
+def _clean_isin(isin: str | None) -> str | None:
+    """Pegar un ISIN suele traer espacios o minúsculas, y FT no lo reconoce así."""
+    return (isin or "").strip().upper() or None
+
+
 def _serialize(inv: models.Investment) -> schemas.InvestmentOut:
     stats = investment_logic.holding_stats_for(inv)
     return schemas.InvestmentOut(
@@ -53,25 +58,41 @@ def list_investments(db: Session = Depends(get_db)):
 @router.get("/price-lookup", response_model=schemas.PriceLookupResult)
 def price_lookup(isin: str):
     try:
-        price = ft_price.fetch_ft_price(f"{isin}:EUR")
+        symbol, price = ft_price.lookup_isin(_clean_isin(isin) or "")
     except Exception as e:
         return schemas.PriceLookupResult(ok=False, error=str(e))
-    return schemas.PriceLookupResult(ok=True, price=price)
+    return schemas.PriceLookupResult(ok=True, price=price, symbol=symbol)
 
 
 @router.post("", response_model=schemas.InvestmentOut)
 def create_investment(payload: schemas.InvestmentCreate, db: Session = Depends(get_db)):
     if payload.type not in models.INVESTMENT_TYPES:
         raise HTTPException(status_code=422, detail="Invalid investment type")
+    isin = _clean_isin(payload.isin)
     inv = models.Investment(
         name=payload.name,
         type=payload.type,
-        isin=payload.isin,
+        isin=isin,
         account=payload.account,
         target_weight=payload.target_weight,
         ft_symbol=payload.ft_symbol,
         active=payload.active,
     )
+    # El precio inicial se pide aquí y no depende de que el formulario haya hecho la búsqueda
+    # al salir del campo (pulsar Crear justo después de escribir el ISIN la dejaba a medias).
+    if (payload.ft_symbol or isin) and payload.type not in ("seguros", "roboadvisor"):
+        try:
+            if payload.ft_symbol:
+                symbol, price = payload.ft_symbol, ft_price.fetch_ft_price(payload.ft_symbol)
+            else:
+                symbol, price = ft_price.lookup_isin(isin)
+        except Exception:
+            symbol = price = None  # sin precio de FT queda a 0 y se puede poner a mano o con "Actualizar"
+        if price is not None:
+            inv.ft_symbol = symbol  # guarda el símbolo real (puede no ser ISIN:EUR) para las siguientes actualizaciones
+            inv.current_price = price
+            inv.price_updated_at = datetime.utcnow()
+            _record_snapshot(inv, price)
     db.add(inv)
     db.commit()
     db.refresh(inv)
@@ -85,7 +106,7 @@ def update_investment(investment_id: int, payload: schemas.InvestmentUpdate, db:
     inv = _get(db, investment_id)
     inv.name = payload.name
     inv.type = payload.type
-    inv.isin = payload.isin
+    inv.isin = _clean_isin(payload.isin)
     inv.account = payload.account
     inv.target_weight = payload.target_weight
     inv.ft_symbol = payload.ft_symbol
