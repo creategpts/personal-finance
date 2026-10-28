@@ -8,6 +8,7 @@ export default function HoldingsTable({
   holdings,
   lumpSum,
   showWeights,
+  showUnits = true,
   hideAmounts,
   onEdit,
 }: {
@@ -15,6 +16,7 @@ export default function HoldingsTable({
   holdings: Investment[]
   lumpSum: boolean
   showWeights?: boolean // Peso objetivo / actual, the latter relative to this table only
+  showUnits?: boolean // Participaciones column (ignored for lump-sum holdings, which have no units)
   hideAmounts: boolean
   onEdit: (inv: Investment) => void
 }) {
@@ -33,7 +35,7 @@ export default function HoldingsTable({
         <thead>
           <tr>
             <th>Nombre</th>
-            {!lumpSum && <th className="text-right">Participaciones</th>}
+            {!lumpSum && showUnits && <th className="text-right">Participaciones</th>}
             <th className="text-right">Total {lumpSum ? 'aportado' : 'invertido'}</th>
             {!lumpSum && <th className="text-right">Precio medio</th>}
             {!lumpSum && <th className="text-right">Valor liquidativo</th>}
@@ -53,7 +55,7 @@ export default function HoldingsTable({
               className={`cursor-pointer hover:bg-surface2 ${inv.active ? '' : 'opacity-50'}`}
             >
               <td className="font-medium text-fg">{inv.name}</td>
-              {!lumpSum && <td className="text-right num">{inv.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>}
+              {!lumpSum && showUnits && <td className="text-right num">{inv.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>}
               <td className="text-right"><Money value={inv.stats.total_invertido} className={blur} /></td>
               {!lumpSum && <td className="text-right"><Money value={inv.stats.avg_cost} className={blur} /></td>}
               {!lumpSum && <td className="text-right"><Money value={inv.current_price} className={blur} /></td>}
