@@ -2,6 +2,7 @@
   - "Inversión mm/aaaa": neto de aportaciones menos ventas del mes (origen -> destino).
   - "Revalorización mm/aaaa": cambio de valor de la cartera en el mes menos lo aportado,
     para que el saldo de la cuenta de destino siga el valor real.
+Solo cuentan los fondos de inversión: el resto de tipos (cripto, MMPP, seguros, roboadvisor) se lleva a mano.
 Ambos van fechados el día 29 (o el último del mes), solo cuentan desde investment_movement_start
 (el día en que se configuraron las cuentas; nunca se hace backfill) y se localizan por su concepto."""
 
@@ -11,6 +12,8 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 
 from . import investment_logic, models
+
+FUND_TYPE = "fondo_inversion"
 
 
 def _settings(db: Session) -> dict[str, str]:
@@ -44,7 +47,10 @@ def _upsert(db: Session, concept: str, year: int, month: int, plan) -> None:
 def _month_flows(db: Session, first: date, end: date) -> float:
     return sum(
         t.amount
-        for t in db.query(models.InvestmentTransaction).filter(
+        for t in db.query(models.InvestmentTransaction)
+        .join(models.Investment)
+        .filter(
+            models.Investment.type == FUND_TYPE,
             models.InvestmentTransaction.kind == "flow",
             models.InvestmentTransaction.date >= first,
             models.InvestmentTransaction.date <= end,
@@ -54,11 +60,10 @@ def _month_flows(db: Session, first: date, end: date) -> float:
 
 def _portfolio_value_on(db: Session, d: date, today: date) -> float:
     total = 0.0
-    for inv in db.query(models.Investment).all():
+    for inv in db.query(models.Investment).filter(models.Investment.type == FUND_TYPE):
         prices = {h.date: h.price for h in inv.price_history}
         prices.update({s.date: s.price for s in inv.snapshots})  # lecturas propias mandan sobre el histórico
-        kind = "balance" if inv.type == "seguros" else "fund"
-        total += investment_logic.holding_value_on(kind, inv.transactions, sorted(prices.items()), inv.current_price, d, today)
+        total += investment_logic.holding_value_on("fund", inv.transactions, sorted(prices.items()), inv.current_price, d, today)
     return total
 
 
