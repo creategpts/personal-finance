@@ -180,7 +180,7 @@ export interface GoalProgress {
 
 export type InvestmentType = 'fondo_inversion' | 'roboadvisor' | 'criptomoneda' | 'mmpp' | 'seguros'
 
-export type InvestmentTransactionKind = 'flow' | 'adjustment'
+export type InvestmentTransactionKind = 'flow' | 'adjustment' | 'opening'
 
 export interface InvestmentTransaction {
   id: number
@@ -444,6 +444,7 @@ export const api = {
     refreshPrice: (id: number) =>
       request<PriceRefreshResult>(`/investments/${id}/refresh-price`, { method: 'POST' }),
     refreshAllPrices: () => request<PriceRefreshResult[]>('/investments/refresh-prices', { method: 'POST' }),
+    fxRate: (currency: string) => request<{ currency: string; rate: number }>(`/investments/fx/${encodeURIComponent(currency)}`),
     priceLookup: (isin: string) => request<PriceLookupResult>(`/investments/price-lookup?isin=${encodeURIComponent(isin)}`),
     history: (type?: InvestmentType) =>
       request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),

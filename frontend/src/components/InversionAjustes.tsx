@@ -91,7 +91,7 @@ export default function InversionAjustes({
           value={destination}
           onChange={setDestination}
           accounts={allAccounts}
-          hint="Las aportaciones de los fondos de inversión del mes (menos las ventas) se registran en un solo Movimiento fechado el día 29, o el último día del mes. Sin las dos cuentas no se crea."
+          hint="Las compras de los fondos de inversión del mes (menos las ventas) se registran en un solo Movimiento fechado el día 29, o el último día del mes. Las posiciones iniciales no cuentan. Sin las dos cuentas no se crea."
         />
         <AccountSelect
           label="Categoría de revalorización (ingreso)"
@@ -104,7 +104,7 @@ export default function InversionAjustes({
           value={devalCategory}
           onChange={setDevalCategory}
           accounts={expenseCategories}
-          hint="Cada mes se registra también la ganancia o pérdida de los fondos en la cuenta de destino: Revalorización si sube, Devaluación si baja. Necesita las dos categorías."
+          hint="Cada mes se registra también la revalorización o devaluación que falta para que el saldo de la cuenta de destino coincida con el Valor actual del panel. Necesita las dos categorías."
         />
 
         <h3 className="pt-2 text-sm font-semibold text-fg">Oportunidades de compra</h3>

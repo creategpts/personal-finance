@@ -18,7 +18,11 @@ _HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; finance-tracker/1.0)"}
 
 
 def symbol_for(ft_symbol: str | None, isin: str | None) -> str | None:
-    return ft_symbol or (f"{isin}:EUR" if isin else None)
+    if ft_symbol:
+        return ft_symbol
+    if not isin:
+        return None
+    return isin if ":" in isin else f"{isin}:EUR"  # un ISIN guardado ya con divisa (ISIN:USD) es el símbolo
 
 
 FT_SEARCH = "https://markets.ft.com/data/searchapi/searchsecurities"
@@ -112,9 +116,20 @@ def currency_of(symbol: str) -> str:
     return symbol.rsplit(":", 1)[1].upper() if ":" in symbol else "EUR"
 
 
+_FX_TTL = timedelta(minutes=5)
+_fx_cache: dict[str, tuple[datetime, float]] = {}
+
+
 def fetch_fx_rate(currency: str) -> float:
-    """Unidades de `currency` por 1 EUR (FT: EURUSD = 1.11)."""
-    return fetch_ft_price(f"EUR{currency}")
+    """Unidades de `currency` por 1 EUR (FT: EURUSD = 1.11). Cacheado 5 min por proceso: la página
+    sincroniza todos los fondos a la vez y no hace falta pedir el mismo cambio varias veces."""
+    now = datetime.utcnow()
+    hit = _fx_cache.get(currency)
+    if hit and now - hit[0] < _FX_TTL:
+        return hit[1]
+    rate = fetch_ft_price(f"EUR{currency}")
+    _fx_cache[currency] = (now, rate)
+    return rate
 
 
 def fetch_fx_history(currency: str, start: date, end: date) -> list[tuple[date, float]]:

@@ -42,13 +42,14 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
   const [lookupError, setLookupError] = useState<string | null>(null)
 
   async function handleIsinBlur() {
-    const clean = isin.trim().toUpperCase()
-    setIsin(clean)
+    // un ISIN escrito con divisa (IE00BDZVHT63:USD) es el símbolo FT: se separa del ISIN
+    const [clean, currencySuffix] = isin.trim().toUpperCase().split(':')
+    setIsin(clean ?? '')
     if (!clean) return
     setLookupBusy(true)
     setLookupError(null)
     try {
-      const result = await api.investments.priceLookup(clean)
+      const result = await api.investments.priceLookup(currencySuffix ? `${clean}:${currencySuffix}` : clean)
       if (result.ok && result.price != null) {
         setCurrentPrice(String(result.price))
         setFtSymbol(result.symbol ?? null)
@@ -70,7 +71,7 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
       await onSave({
         name,
         type,
-        isin: isin.trim().toUpperCase() || null,
+        isin: isin.trim().toUpperCase().split(':')[0] || null,
         account: account || null,
         target_weight: Number(targetWeight),
         ft_symbol: ftSymbol,

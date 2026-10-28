@@ -214,7 +214,7 @@ class InvestmentTransactionBase(BaseModel):
     date: date_type
     units: float  # positive = aportación/compra, negative = venta; unused (0) for lump-sum holdings
     amount: float  # positive = dinero entrante, negative = dinero saliente
-    kind: str = "flow"  # "flow" (aportación/venta) or "adjustment" (ajuste de valor, lump-sum only)
+    kind: str = "flow"  # "flow" (aportación/venta), "adjustment" (ajuste de valor, lump-sum only) or "opening" (posición inicial, no genera movimiento)
     note: str | None = None
 
 
@@ -320,6 +320,11 @@ class Liquidity(BaseModel):
 class MarketOverview(BaseModel):
     liquidity: Liquidity
     funds: list[MarketFund]
+
+
+class FxRate(BaseModel):
+    currency: str
+    rate: float  # unidades de `currency` por 1 EUR
 
 
 class PriceLookupResult(BaseModel):

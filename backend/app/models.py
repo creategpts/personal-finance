@@ -214,7 +214,10 @@ class InvestmentTransaction(Base):
 
     kind="flow": real cash movement (aportación/venta), counts toward total_invertido.
     kind="adjustment": manual valuation change (lump-sum holdings only, e.g. seguros) —
-    counts toward valor_actual but not total_invertido. units is unused (0.0) for
+    counts toward valor_actual but not total_invertido.
+    kind="opening": posición inicial de un fondo (cartera que ya existía y ya está contabilizada en su
+    Cuenta): cuenta en capital invertido y plusvalía como una compra, pero no genera Movimiento.
+    units is unused (0.0) for
     lump-sum holdings; they have no per-unit price."""
 
     __tablename__ = "investment_transactions"

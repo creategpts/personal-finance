@@ -18,6 +18,7 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
   const [price, setPrice] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [opening, setOpening] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const parsedPrice = parseDecimal(price)
@@ -31,9 +32,10 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
         date,
         units: sign * (parsedPrice > 0 ? parsedAmount / parsedPrice : 0),
         amount: sign * parsedAmount,
-        kind: 'flow',
+        kind: opening ? 'opening' : 'flow',
         note: note || null,
       })
+      setOpening(false)
       setPrice('')
       setAmount('')
       setNote('')
@@ -64,6 +66,10 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
         <input required type="text" inputMode="decimal" placeholder="Importe €" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
       <input className="input mt-2" placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
+      <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs text-muted">
+        <input type="checkbox" className="mt-0.5 h-3.5 w-3.5 accent-fg" checked={opening} onChange={(e) => setOpening(e.target.checked)} />
+        <span>Posición inicial: cartera que ya tenías y ya está en la cuenta. Cuenta como invertido, pero no genera movimiento.</span>
+      </label>
       <button type="button" disabled={busy || !(parsedPrice > 0) || !(parsedAmount > 0)} onClick={handleAdd} className="btn-primary mt-2 w-full">
         + Añadir
       </button>
@@ -155,6 +161,15 @@ export default function InvestmentLedger() {
   const { data: investments } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const investment: Investment | null = investments?.find((i) => i.id === Number(id)) ?? null
   const notFound = investments !== undefined && !investment
+  // divisa en la que cotiza el fondo (ISIN:USD); el precio se guarda ya convertido a euros
+  const quoteCurrency = (investment?.ft_symbol ?? investment?.isin)?.split(':')[1]?.toUpperCase()
+  const converted = !!quoteCurrency && quoteCurrency !== 'EUR'
+  const { data: fx } = useQuery({
+    queryKey: ['fx', quoteCurrency],
+    enabled: converted,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => api.investments.fxRate(quoteCurrency!),
+  })
   const [editingTx, setEditingTx] = useState<InvestmentTransaction | null>(null)
 
   async function refresh() {
@@ -238,6 +253,11 @@ export default function InvestmentLedger() {
             <Money value={investment.current_price} className={blur} />
           </Fact>
         )}
+        {converted && (
+          <Fact label={`Cambio ${quoteCurrency} → EUR`}>
+            {fx ? `1 € = ${fx.rate.toLocaleString('es-ES', { maximumFractionDigits: 4 })} ${quoteCurrency}` : '—'}
+          </Fact>
+        )}
         <Fact label="Valor de mercado">
           <Money value={investment.stats.valor_actual} className={blur} />
         </Fact>
@@ -315,7 +335,7 @@ export default function InvestmentLedger() {
                       : tx.amount >= 0
                         ? 'Aportación'
                         : 'Retirada'
-                    : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
+                    : `${tx.kind === 'opening' ? 'Posición inicial · ' : ''}${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
                   · <Money value={tx.amount} />
                   {tx.note ? ` · ${tx.note}` : ''}
                 </span>

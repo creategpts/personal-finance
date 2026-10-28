@@ -28,7 +28,20 @@ def _record_snapshot(inv: models.Investment, price: float) -> None:
 
 def _clean_isin(isin: str | None) -> str | None:
     """Pegar un ISIN suele traer espacios o minúsculas, y FT no lo reconoce así."""
-    return (isin or "").strip().upper() or None
+    return (isin or "").strip().upper().split(":")[0] or None
+
+
+def _split_isin(raw: str | None, ft_symbol: str | None) -> tuple[str | None, str | None]:
+    """Un ISIN escrito con divisa ('IE00BDZVHT63:USD') es en realidad el símbolo FT: se separa."""
+    raw = (raw or "").strip().upper()
+    return _clean_isin(raw), ft_symbol or (raw if ":" in raw else None)
+
+
+def _heal_symbol(inv: models.Investment, symbol: str) -> None:
+    """Filas guardadas con el símbolo dentro del campo ISIN: al conseguir un precio se separan."""
+    if ":" in (inv.isin or ""):
+        inv.isin = _clean_isin(inv.isin)
+        inv.ft_symbol = inv.ft_symbol or symbol
 
 
 def _serialize(inv: models.Investment) -> schemas.InvestmentOut:
@@ -55,10 +68,23 @@ def list_investments(db: Session = Depends(get_db)):
     return [_serialize(inv) for inv in investments]
 
 
+@router.get("/fx/{currency}", response_model=schemas.FxRate)
+def fx_rate(currency: str):
+    """Cambio EUR->moneda de FT, para mostrar con qué tipo se convierte un fondo que no cotiza en EUR."""
+    try:
+        return schemas.FxRate(currency=currency.upper(), rate=ft_price.fetch_fx_rate(currency.upper()))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
 @router.get("/price-lookup", response_model=schemas.PriceLookupResult)
 def price_lookup(isin: str):
+    raw = (isin or "").strip().upper()
     try:
-        symbol, price = ft_price.lookup_isin(_clean_isin(isin) or "")
+        if ":" in raw:  # ya trae la divisa (ISIN:USD): es el símbolo FT
+            symbol, price = raw, ft_price.fetch_ft_price_eur(raw)
+        else:
+            symbol, price = ft_price.lookup_isin(raw)
     except Exception as e:
         return schemas.PriceLookupResult(ok=False, error=str(e))
     return schemas.PriceLookupResult(ok=True, price=price, symbol=symbol)
@@ -68,22 +94,22 @@ def price_lookup(isin: str):
 def create_investment(payload: schemas.InvestmentCreate, db: Session = Depends(get_db)):
     if payload.type not in models.INVESTMENT_TYPES:
         raise HTTPException(status_code=422, detail="Invalid investment type")
-    isin = _clean_isin(payload.isin)
+    isin, ft_symbol = _split_isin(payload.isin, payload.ft_symbol)
     inv = models.Investment(
         name=payload.name,
         type=payload.type,
         isin=isin,
         account=payload.account,
         target_weight=payload.target_weight,
-        ft_symbol=payload.ft_symbol,
+        ft_symbol=ft_symbol,
         active=payload.active,
     )
     # El precio inicial se pide aquí y no depende de que el formulario haya hecho la búsqueda
     # al salir del campo (pulsar Crear justo después de escribir el ISIN la dejaba a medias).
-    if (payload.ft_symbol or isin) and payload.type not in ("seguros", "roboadvisor"):
+    if (ft_symbol or isin) and payload.type not in ("seguros", "roboadvisor"):
         try:
-            if payload.ft_symbol:
-                symbol, price = payload.ft_symbol, ft_price.fetch_ft_price_eur(payload.ft_symbol)
+            if ft_symbol:
+                symbol, price = ft_symbol, ft_price.fetch_ft_price_eur(ft_symbol)
             else:
                 symbol, price = ft_price.lookup_isin(isin)
         except Exception:
@@ -106,10 +132,9 @@ def update_investment(investment_id: int, payload: schemas.InvestmentUpdate, db:
     inv = _get(db, investment_id)
     inv.name = payload.name
     inv.type = payload.type
-    inv.isin = _clean_isin(payload.isin)
+    inv.isin, inv.ft_symbol = _split_isin(payload.isin, payload.ft_symbol)
     inv.account = payload.account
     inv.target_weight = payload.target_weight
-    inv.ft_symbol = payload.ft_symbol
     inv.active = payload.active
     if payload.current_price is not None:
         inv.current_price = payload.current_price
@@ -195,6 +220,7 @@ def refresh_price(investment_id: int, db: Session = Depends(get_db)):
         return schemas.PriceRefreshResult(investment_id=inv.id, ok=False, error=str(e))
     inv.current_price = price
     inv.price_updated_at = datetime.utcnow()
+    _heal_symbol(inv, symbol)
     _record_snapshot(inv, price)
     db.flush()
     investment_movements.sync_current_month_revalorization(db)
@@ -216,6 +242,7 @@ def refresh_all_prices(db: Session = Depends(get_db)):
             continue
         inv.current_price = price
         inv.price_updated_at = datetime.utcnow()
+        _heal_symbol(inv, symbol)
         _record_snapshot(inv, price)
         results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price))
     db.flush()
@@ -259,6 +286,7 @@ def sync_market(investment_id: int, db: Session = Depends(get_db)):
         return schemas.MarketSyncResult(investment_id=inv.id, ok=False, error=str(e))
     inv.current_price = price
     inv.price_updated_at = datetime.utcnow()
+    _heal_symbol(inv, symbol)
     _record_snapshot(inv, price)
     known = {d for (d,) in db.query(models.PriceHistory.date).filter(models.PriceHistory.investment_id == inv.id, models.PriceHistory.date >= start)}
     db.add_all(models.PriceHistory(investment_id=inv.id, date=d, price=p) for d, p in rows if d not in known)
