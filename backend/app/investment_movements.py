@@ -3,7 +3,7 @@
 entre su "Valor actual" y su capital invertido, menos lo ya anotado como Revalorización/Devaluación en esa cuenta.
 Las aportaciones NO se generan: son Movimientos que registra el usuario y el panel los ofrece para asignar a
 fondos (account-check), así que la revalorización no depende de ellos.
-Va fechado el día 29 (o el último del mes), desde la primera operación, y se localiza por su concepto."""
+Va fechado el día 29 (o el último del mes), desde la fecha de inicio de Ajustes, y se localiza por su concepto."""
 
 import calendar
 from datetime import date
@@ -83,8 +83,10 @@ def sync_revalorization(db: Session, year: int, month: int) -> None:
     month_end = date(year, month, calendar.monthrange(year, month)[1])
     end = min(month_end, today)
     concept = f"Revalorización {month:02d}/{year}"
-    first_op = db.query(func.min(models.InvestmentTransaction.date)).scalar()
-    if first_op is None or end < first_op:  # sin cartera todavía (o sin operaciones): nada que reflejar
+    # se cuenta desde la fecha de inicio de Ajustes (la misma de la asignación pendiente); sin ella, desde la primera operación
+    start = settings.get("investment_tracking_start")
+    first = date.fromisoformat(start) if start else db.query(func.min(models.InvestmentTransaction.date)).scalar()
+    if first is None or end < first:  # antes de empezar a contar: nada que reflejar
         _upsert(db, concept, year, month, None)
         return
     plusvalia = _portfolio_value_on(db, end, today) - _portfolio_invested_on(db, end)
