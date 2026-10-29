@@ -12,7 +12,6 @@ export interface Settings {
   liquidity_account: string // Cuenta (Ahorro) whose balance minus emergency_fund is the pull for buying dips ('' = none)
   emergency_fund: string // € of that account reserved and never touched
   dip_levels: string // comma-separated % drawdown thresholds for the buy alerts, ascending (e.g. '5,10,20')
-  investment_origin_account: string // Cuenta that investment contributions leave from ('' = no monthly movement)
   investment_destination_account: string // Cuenta they land in
   investment_reval_category: string // Categoría de ingreso que origina el movimiento mensual de revalorización
   investment_deval_category: string // Categoría de gasto que recibe el de devaluación
@@ -27,7 +26,6 @@ const DEFAULTS: Settings = {
   liquidity_account: '',
   emergency_fund: '0',
   dip_levels: '5,10,20',
-  investment_origin_account: '',
   investment_destination_account: '',
   investment_reval_category: '',
   investment_deval_category: '',

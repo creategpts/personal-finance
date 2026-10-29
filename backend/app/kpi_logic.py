@@ -45,6 +45,17 @@ def _is_valuation_adjustment(name: str, names: dict[str, set[str]]) -> bool:
     return False
 
 
+def is_adjustment(name: str, names: dict[str, set[str]]) -> bool:
+    """A valuation adjustment (Revalorización/Devaluación), or an origin/destination
+    that isn't a recognized category or account at all — e.g. "New Asset", a
+    one-off bootstrap entry from a category since renamed or deleted. Neither
+    represents real capital that needs reconciling against a fund purchase."""
+    if _is_valuation_adjustment(name, names):
+        return True
+    known = names["income_all"] | names["expense_all"] | names["saving"] | names["investment"] | names["gasto"]
+    return name not in known
+
+
 def matches_kpi(movement: models.Movement, kpi: str, names: dict[str, set[str]]) -> bool:
     # every account, regardless of type — there's no neutral/checking type
     account_names = names["saving"] | names["investment"] | names["gasto"]

@@ -1,7 +1,22 @@
-import type { PortfolioSummary } from '../api'
+import type { AccountCheckItem, Investment, PortfolioSummary } from '../api'
 import StatTile from './StatTile'
+import PendingAssignmentCard from './PendingAssignmentCard'
 
-export default function InversionDashboard({ summary, hideAmounts }: { summary: PortfolioSummary | null; hideAmounts: boolean }) {
+export default function InversionDashboard({
+  investments,
+  summary,
+  accountCheck,
+  hideAmounts,
+  onAssigned,
+  onCreateForAccount,
+}: {
+  investments: Investment[]
+  summary: PortfolioSummary | null
+  accountCheck: AccountCheckItem[]
+  hideAmounts: boolean
+  onAssigned: () => Promise<void>
+  onCreateForAccount: (account: string) => void
+}) {
   return (
     <div>
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -20,6 +35,14 @@ export default function InversionDashboard({ summary, hideAmounts }: { summary: 
           </div>
         </div>
       </div>
+
+      <PendingAssignmentCard
+        items={accountCheck}
+        investments={investments}
+        hideAmounts={hideAmounts}
+        onAssigned={onAssigned}
+        onCreateForAccount={onCreateForAccount}
+      />
     </div>
   )
 }

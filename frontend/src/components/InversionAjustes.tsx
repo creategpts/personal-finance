@@ -28,7 +28,7 @@ function AccountSelect({ label, value, onChange, accounts, hint }: {
   )
 }
 
-// savingAccounts feeds the liquidity pick (Cuentas de ahorro); allAccounts the contribution movement.
+// savingAccounts feeds the liquidity pick (Cuentas de ahorro); allAccounts the revalorization account.
 export default function InversionAjustes({
   savingAccounts,
   allAccounts,
@@ -47,7 +47,6 @@ export default function InversionAjustes({
   const [liquidity, setLiquidity] = useState(settings.liquidity_account)
   const [emergency, setEmergency] = useState(settings.emergency_fund)
   const [levels, setLevels] = useState(settings.dip_levels)
-  const [origin, setOrigin] = useState(settings.investment_origin_account)
   const [destination, setDestination] = useState(settings.investment_destination_account)
   const [revalCategory, setRevalCategory] = useState(
     settings.investment_reval_category || incomeCategories.find((c) => c.name === 'Revalorización')?.name || '',
@@ -62,7 +61,6 @@ export default function InversionAjustes({
       liquidity_account: liquidity,
       emergency_fund: String(parseFloat(emergency.replace(',', '.')) || 0),
       dip_levels: parseLevels(levels).join(','),
-      investment_origin_account: origin,
       investment_destination_account: destination,
       investment_reval_category: revalCategory,
       investment_deval_category: devalCategory,
@@ -84,14 +82,13 @@ export default function InversionAjustes({
       }
     >
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-fg">Movimiento mensual de inversión</h3>
-        <AccountSelect label="Cuenta de origen" value={origin} onChange={setOrigin} accounts={allAccounts} />
+        <h3 className="text-sm font-semibold text-fg">Revalorización mensual</h3>
         <AccountSelect
           label="Cuenta de destino"
           value={destination}
           onChange={setDestination}
           accounts={allAccounts}
-          hint="Las compras de los fondos de inversión del mes (menos las ventas) se registran en un solo Movimiento fechado el día 29, o el último día del mes. Las posiciones iniciales no cuentan. Sin las dos cuentas no se crea."
+          hint="Cuenta donde se anota la plusvalía de la cartera: un Movimiento mensual fechado el día 29 (o el último día del mes). Las aportaciones las registras tú como Movimientos y el panel te las ofrece para asignarlas a los fondos. Sin cuenta y categorías no se crea."
         />
         <AccountSelect
           label="Categoría de revalorización (ingreso)"

@@ -338,3 +338,21 @@ class PortfolioHistoryPoint(BaseModel):
     date: str
     total_invertido: float
     valor_actual: float
+
+
+class AccountCheckItem(BaseModel):
+    account: str
+    net_moved: float
+    contributed: float
+    difference: float
+
+
+class PendingAllocation(BaseModel):
+    investment_id: int
+    amount: float  # positive = aportación a esa holding
+    price: float | None = None  # required for fund-style holdings; ignored for lump-sum (seguros)
+
+
+class AssignPendingRequest(BaseModel):
+    date: date_type
+    allocations: list[PendingAllocation]

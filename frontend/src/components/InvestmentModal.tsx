@@ -7,6 +7,7 @@ import { TrashIcon } from './Icons'
 interface Props {
   initial?: Investment | null
   accounts: Category[]
+  initialAccount?: string
   onClose: () => void
   onSave: (data: InvestmentInput) => Promise<void>
   onDelete?: () => Promise<void>
@@ -22,7 +23,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export default function InvestmentModal({ initial, accounts, onClose, onSave, onDelete, onRefreshPrice }: Props) {
+export default function InvestmentModal({ initial, accounts, initialAccount, onClose, onSave, onDelete, onRefreshPrice }: Props) {
   const editing = !!initial
   const hasIsin = (t: InvestmentType) => INVESTMENT_TYPES_WITH_ISIN.includes(t)
 
@@ -31,7 +32,7 @@ export default function InvestmentModal({ initial, accounts, onClose, onSave, on
   const [isin, setIsin] = useState(initial?.isin ?? '')
   // símbolo FT resuelto para el ISIN (no todos cotizan en EUR); se conserva al editar
   const [ftSymbol, setFtSymbol] = useState<string | null>(initial?.ft_symbol ?? null)
-  const [account, setAccount] = useState(initial?.account ?? accounts[0]?.name ?? '')
+  const [account, setAccount] = useState(initial?.account ?? initialAccount ?? accounts[0]?.name ?? '')
   const [targetWeight, setTargetWeight] = useState(initial?.target_weight?.toString() ?? '0')
   const [currentPrice, setCurrentPrice] = useState(initial?.current_price?.toString() ?? '0')
   const [active, setActive] = useState(initial?.active ?? true)

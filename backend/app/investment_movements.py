@@ -1,10 +1,9 @@
-"""Movimientos mensuales automáticos del Panel de inversión, entre las Cuentas de Ajustes:
-  - "Inversión mm/aaaa": neto de aportaciones menos ventas del mes (origen -> destino).
-  - "Revalorización mm/aaaa": lo que falta para que el saldo de la cuenta de destino (saldo inicial más
-    todos sus movimientos) sea igual al "Valor actual" del panel de Inversión, con todas sus holdings.
-Las aportaciones automáticas son solo de fondos de inversión: las de cripto, MMPP, seguros y roboadvisor
-se registran a mano, y la revalorización absorbe lo que su valor aporte.
-Ambos van fechados el día 29 (o el último del mes), desde la primera operación, y se localizan por su concepto."""
+"""Movimiento mensual automático de revalorización del Panel de inversión:
+"Revalorización mm/aaaa" lleva a la cuenta de destino (Ajustes) la plusvalía de toda la cartera: la diferencia
+entre su "Valor actual" y su capital invertido, menos lo ya anotado como Revalorización/Devaluación en esa cuenta.
+Las aportaciones NO se generan: son Movimientos que registra el usuario y el panel los ofrece para asignar a
+fondos (account-check), así que la revalorización no depende de ellos.
+Va fechado el día 29 (o el último del mes), desde la primera operación, y se localiza por su concepto."""
 
 import calendar
 from datetime import date
@@ -13,8 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import investment_logic, models
-
-FUND_TYPE = "fondo_inversion"
+from .kpi_logic import category_name_sets, is_adjustment
 
 
 def _settings(db: Session) -> dict[str, str]:
@@ -36,20 +34,6 @@ def _upsert(db: Session, concept: str, year: int, month: int, plan) -> None:
         db.add(movement)
 
 
-def _month_flows(db: Session, first: date, end: date) -> float:
-    return sum(
-        t.amount
-        for t in db.query(models.InvestmentTransaction)
-        .join(models.Investment)
-        .filter(
-            models.Investment.type == FUND_TYPE,
-            models.InvestmentTransaction.kind == "flow",
-            models.InvestmentTransaction.date >= first,
-            models.InvestmentTransaction.date <= end,
-        )
-    )
-
-
 def _portfolio_value_on(db: Session, d: date, today: date) -> float:
     """Valor de toda la cartera el día d: lo mismo que suma el "Valor actual" del panel."""
     total = 0.0
@@ -61,9 +45,19 @@ def _portfolio_value_on(db: Session, d: date, today: date) -> float:
     return total
 
 
-def _balance_without(db: Session, account: str, month_end: date, concept: str) -> float:
-    """Saldo de la cuenta como lo calcula la app (saldo inicial + movimientos hechos), salvo el movimiento `concept`."""
-    category = db.query(models.Category).filter_by(name=account).first()
+def _portfolio_invested_on(db: Session, d: date) -> float:
+    """Capital invertido de toda la cartera el día d (coste medio de lo que se tiene)."""
+    total = 0.0
+    for inv in db.query(models.Investment):
+        kind = "balance" if inv.type == "seguros" else "fund"
+        invertido, _ = investment_logic.value_at([(kind, inv.transactions, [])], d)
+        total += invertido
+    return total
+
+
+def _adjustments_without(db: Session, account: str, month_end: date, concept: str) -> float:
+    """Revalorizaciones/devaluaciones ya anotadas en la cuenta hasta month_end, salvo el movimiento `concept`."""
+    names = category_name_sets(db)
     done = (
         db.query(models.Movement)
         .filter(
@@ -74,17 +68,9 @@ def _balance_without(db: Session, account: str, month_end: date, concept: str) -
         )
         .all()
     )
-    return (category.initial_balance if category else 0.0) + sum(m.amount if m.destination == account else -m.amount for m in done)
-
-
-def sync_contribution(db: Session, year: int, month: int) -> None:
-    settings = _settings(db)
-    origin, destination = settings.get("investment_origin_account"), settings.get("investment_destination_account")
-    if not origin or not destination:
-        return
-    end = date(year, month, calendar.monthrange(year, month)[1])
-    net = _month_flows(db, date(year, month, 1), end)
-    _upsert(db, f"Inversión {month:02d}/{year}", year, month, investment_logic.monthly_movement(net, origin, destination))
+    return sum(m.amount for m in done if m.destination == account and is_adjustment(m.origin, names)) - sum(
+        m.amount for m in done if m.origin == account and is_adjustment(m.destination, names)
+    )
 
 
 def sync_revalorization(db: Session, year: int, month: int) -> None:
@@ -101,7 +87,8 @@ def sync_revalorization(db: Session, year: int, month: int) -> None:
     if first_op is None or end < first_op:  # sin cartera todavía (o sin operaciones): nada que reflejar
         _upsert(db, concept, year, month, None)
         return
-    delta = _portfolio_value_on(db, end, today) - _balance_without(db, account, month_end, concept)
+    plusvalia = _portfolio_value_on(db, end, today) - _portfolio_invested_on(db, end)
+    delta = plusvalia - _adjustments_without(db, account, month_end, concept)
     _upsert(db, concept, year, month, investment_logic.revalorization_movement(delta, reval_cat, deval_cat, account))
 
 
@@ -113,9 +100,7 @@ def _months_from(year: int, month: int, today: date):
 
 def sync_month(db: Session, year: int, month: int) -> None:
     """Llamar tras db.flush(): las consultas no ven cambios sin volcar (la sesión no hace autoflush).
-    Cada revalorización depende de los movimientos anteriores, así que se rehacen también los meses siguientes."""
-    sync_contribution(db, year, month)
-    db.flush()
+    Cada revalorización depende de las anteriores, así que se rehacen también los meses siguientes."""
     for y, m in _months_from(year, month, date.today()):
         sync_revalorization(db, y, m)
         db.flush()

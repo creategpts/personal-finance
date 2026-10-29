@@ -17,11 +17,13 @@ export default function Inversion() {
   const [showSettings, setShowSettings] = useState(false)
   const { data: investments = [] } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
   const { data: summary = null } = useQuery({ queryKey: ['investments-summary'], queryFn: () => api.investments.summary() })
+  const { data: accountCheck = [] } = useQuery({ queryKey: ['investments-account-check'], queryFn: () => api.investments.accountCheck() })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
   const investmentAccounts = categories.filter((c) => c.type === 'inversion')
   const allAccounts = categories.filter((c) => c.type === 'ahorro' || c.type === 'gasto' || c.type === 'inversion')
   const [editing, setEditing] = useState<Investment | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [prefillAccount, setPrefillAccount] = useState<string | undefined>(undefined)
   const [refreshingAll, setRefreshingAll] = useState(false)
 
   async function refresh() {
@@ -29,6 +31,7 @@ export default function Inversion() {
       queryClient.invalidateQueries({ queryKey: ['investments'] }),
       queryClient.invalidateQueries({ queryKey: ['investments-summary'] }),
       queryClient.invalidateQueries({ queryKey: ['investments-composition'] }),
+      queryClient.invalidateQueries({ queryKey: ['investments-account-check'] }),
     ])
   }
 
@@ -40,6 +43,7 @@ export default function Inversion() {
     }
     setShowModal(false)
     setEditing(null)
+    setPrefillAccount(undefined)
     await refresh()
   }
 
@@ -88,6 +92,7 @@ export default function Inversion() {
           <button
             onClick={() => {
               setEditing(null)
+              setPrefillAccount(undefined)
               setShowModal(true)
             }}
             className="btn-primary"
@@ -97,7 +102,18 @@ export default function Inversion() {
         </div>
       </div>
 
-      <InversionDashboard summary={summary} hideAmounts={hideAmounts} />
+      <InversionDashboard
+        investments={investments}
+        summary={summary}
+        accountCheck={accountCheck}
+        hideAmounts={hideAmounts}
+        onAssigned={refresh}
+        onCreateForAccount={(account) => {
+          setEditing(null)
+          setPrefillAccount(account)
+          setShowModal(true)
+        }}
+      />
 
       <div className="mt-8">
         <InversionOportunidades
@@ -118,9 +134,11 @@ export default function Inversion() {
         <InvestmentModal
           initial={editing}
           accounts={investmentAccounts}
+          initialAccount={prefillAccount}
           onClose={() => {
             setShowModal(false)
             setEditing(null)
+            setPrefillAccount(undefined)
           }}
           onSave={handleSave}
           onDelete={editing ? handleDelete : undefined}

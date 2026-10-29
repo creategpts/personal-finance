@@ -190,13 +190,6 @@ def test_monthly_movement_date_is_29th_or_last_day():
     assert investment_logic.monthly_movement_date(2028, 2) == date(2028, 2, 29)
 
 
-def test_monthly_movement_direction_follows_net_sign():
-    assert investment_logic.monthly_movement(500.0, "CAR", "CV") == ("CAR", "CV", 500.0)
-    assert investment_logic.monthly_movement(-120.0, "CAR", "CV") == ("CV", "CAR", 120.0)
-    assert investment_logic.monthly_movement(0.0, "CAR", "CV") is None
-    assert investment_logic.monthly_movement(0.001, "CAR", "CV") is None
-
-
 def test_holding_value_on_uses_known_price_then_current():
     txs = [tx(10, 100.0, date(2026, 1, 10)), tx(5, 60.0, date(2026, 3, 10))]
     prices = [(date(2026, 1, 31), 12.0), (date(2026, 2, 28), 14.0)]

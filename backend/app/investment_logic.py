@@ -77,14 +77,6 @@ def monthly_movement_date(year: int, month: int) -> date:
     return date(year, month, min(MOVEMENT_DAY, calendar.monthrange(year, month)[1]))
 
 
-def monthly_movement(net: float, origin: str, destination: str, tolerance: float = 0.005):
-    """Movimiento (origen, destino, importe) que refleja el neto de aportaciones del mes.
-    Un neto negativo (más ventas que compras) invierte el sentido; ~0 no genera movimiento."""
-    if abs(net) < tolerance:
-        return None
-    return (origin, destination, net) if net > 0 else (destination, origin, -net)
-
-
 def holding_value_on(kind, transactions, prices, current_price, d, today) -> float:
     """Valor de una holding el día d. kind "fund" o "balance" (seguros: la suma corriente ES el valor).
     prices: (fecha, precio) ordenado, mezcla de histórico y lecturas propias. Sin precio conocido
@@ -106,6 +98,13 @@ def revalorization_movement(delta: float, reval_category: str, deval_category: s
     if abs(delta) < tolerance:
         return None
     return (reval_category, account, delta) if delta > 0 else (account, deval_category, -delta)
+
+
+def allocation_matches(pending: float, allocated: float, tolerance: float = 0.01) -> bool:
+    """Whether a pending-assignment split accounts for the full pending amount,
+    within rounding tolerance (splitting cents across holdings can leave a 0.01
+    residual)."""
+    return abs(allocated - pending) <= tolerance
 
 
 def portfolio_summary(stats_list: list[dict]) -> dict:
