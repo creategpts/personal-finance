@@ -140,6 +140,8 @@ def update_investment(investment_id: int, payload: schemas.InvestmentUpdate, db:
         inv.current_price = payload.current_price
         inv.price_updated_at = datetime.utcnow()
         _record_snapshot(inv, payload.current_price)
+        db.flush()
+        investment_movements.sync_current_month_revalorization(db)  # un valor puesto a mano también mueve la revalorización
     db.commit()
     db.refresh(inv)
     return _serialize(inv)

@@ -180,7 +180,7 @@ export interface GoalProgress {
 
 export type InvestmentType = 'fondo_inversion' | 'roboadvisor' | 'criptomoneda' | 'mmpp' | 'seguros'
 
-export type InvestmentTransactionKind = 'flow' | 'adjustment' | 'opening'
+export type InvestmentTransactionKind = 'flow' | 'adjustment'
 
 export interface InvestmentTransaction {
   id: number

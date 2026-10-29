@@ -18,7 +18,6 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
   const [price, setPrice] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
-  const [opening, setOpening] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const parsedPrice = parseDecimal(price)
@@ -32,10 +31,9 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
         date,
         units: sign * (parsedPrice > 0 ? parsedAmount / parsedPrice : 0),
         amount: sign * parsedAmount,
-        kind: opening ? 'opening' : 'flow',
+        kind: 'flow',
         note: note || null,
       })
-      setOpening(false)
       setPrice('')
       setAmount('')
       setNote('')
@@ -66,10 +64,6 @@ function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Prom
         <input required type="text" inputMode="decimal" placeholder="Importe €" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
       </div>
       <input className="input mt-2" placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs text-muted">
-        <input type="checkbox" className="mt-0.5 h-3.5 w-3.5 accent-fg" checked={opening} onChange={(e) => setOpening(e.target.checked)} />
-        <span>Posición inicial: cartera que ya tenías y ya está en la cuenta. Cuenta como invertido, pero no genera movimiento.</span>
-      </label>
       <button type="button" disabled={busy || !(parsedPrice > 0) || !(parsedAmount > 0)} onClick={handleAdd} className="btn-primary mt-2 w-full">
         + Añadir
       </button>
@@ -335,7 +329,7 @@ export default function InvestmentLedger() {
                       : tx.amount >= 0
                         ? 'Aportación'
                         : 'Retirada'
-                    : `${tx.kind === 'opening' ? 'Posición inicial · ' : ''}${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
+                    : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
                   · <Money value={tx.amount} />
                   {tx.note ? ` · ${tx.note}` : ''}
                 </span>

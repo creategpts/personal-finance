@@ -4,8 +4,6 @@
     todos sus movimientos) sea igual al "Valor actual" del panel de Inversión, con todas sus holdings.
 Las aportaciones automáticas son solo de fondos de inversión: las de cripto, MMPP, seguros y roboadvisor
 se registran a mano, y la revalorización absorbe lo que su valor aporte.
-Las operaciones de tipo "opening" (posición inicial: cartera que ya tenías y que ya está contabilizada en la cuenta)
-cuentan en capital invertido y plusvalía, pero no generan movimiento.
 Ambos van fechados el día 29 (o el último del mes), desde la primera operación, y se localizan por su concepto."""
 
 import calendar

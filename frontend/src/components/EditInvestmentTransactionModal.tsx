@@ -15,7 +15,6 @@ interface Props {
 export default function EditInvestmentTransactionModal({ tx, lumpSum, onClose, onSave, onDelete }: Props) {
   const initialKind: 'buy' | 'sell' = tx.amount >= 0 ? 'buy' : 'sell'
   const [mode, setMode] = useState<'flow' | 'adjustment'>(tx.kind === 'adjustment' ? 'adjustment' : 'flow')
-  const [opening, setOpening] = useState(tx.kind === 'opening')
   const [kind, setKind] = useState<'buy' | 'sell'>(initialKind)
   const [date, setDate] = useState(tx.date || today())
   const [price, setPrice] = useState(tx.units !== 0 ? String(Math.abs(tx.amount / tx.units)) : '')
@@ -50,7 +49,7 @@ export default function EditInvestmentTransactionModal({ tx, lumpSum, onClose, o
           date,
           units: sign * (parsedPrice > 0 ? parsedAmount / parsedPrice : 0),
           amount: sign * parsedAmount,
-          kind: opening ? 'opening' : 'flow',
+          kind: 'flow',
           note: note || null,
         })
       }
@@ -141,13 +140,6 @@ export default function EditInvestmentTransactionModal({ tx, lumpSum, onClose, o
         )}
 
         <input className="input" placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
-
-        {!lumpSum && (
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted">
-            <input type="checkbox" className="mt-0.5 h-3.5 w-3.5 accent-fg" checked={opening} onChange={(e) => setOpening(e.target.checked)} />
-            <span>Posición inicial: cartera que ya tenías y ya está en la cuenta. Cuenta como invertido, pero no genera movimiento.</span>
-          </label>
-        )}
       </div>
     </Modal>
   )

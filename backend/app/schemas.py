@@ -214,7 +214,7 @@ class InvestmentTransactionBase(BaseModel):
     date: date_type
     units: float  # positive = aportación/compra, negative = venta; unused (0) for lump-sum holdings
     amount: float  # positive = dinero entrante, negative = dinero saliente
-    kind: str = "flow"  # "flow" (aportación/venta), "adjustment" (ajuste de valor, lump-sum only) or "opening" (posición inicial, no genera movimiento)
+    kind: str = "flow"  # "flow" (aportación/venta), "adjustment" (ajuste de valor, lump-sum only)
     note: str | None = None
 
 
