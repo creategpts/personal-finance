@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { AccountCheckItem, Investment, PortfolioSummary } from '../api'
 import StatTile from './StatTile'
 import PendingAssignmentCard from './PendingAssignmentCard'
@@ -9,6 +10,7 @@ export default function InversionDashboard({
   hideAmounts,
   onAssigned,
   onCreateForAccount,
+  children,
 }: {
   investments: Investment[]
   summary: PortfolioSummary | null
@@ -16,10 +18,11 @@ export default function InversionDashboard({
   hideAmounts: boolean
   onAssigned: () => Promise<void>
   onCreateForAccount: (account: string) => void
+  children?: ReactNode
 }) {
   return (
-    <div>
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="flex flex-col gap-3.5">
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <StatTile label="Capital invertido" value={summary?.total_invertido ?? 0} blurred={hideAmounts} />
         <StatTile label="Valor actual" value={summary?.valor_actual ?? 0} blurred={hideAmounts} />
         <StatTile
@@ -35,6 +38,8 @@ export default function InversionDashboard({
           </div>
         </div>
       </div>
+
+      {children}
 
       <PendingAssignmentCard
         items={accountCheck}

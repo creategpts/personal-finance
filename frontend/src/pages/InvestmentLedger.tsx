@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Investment, type InvestmentTransaction, type InvestmentTransactionInput } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import Money from '../components/Money'
 import { TrashIcon } from '../components/Icons'
-import HoldingHistoryChart from '../components/HoldingHistoryChart'
 import EditInvestmentTransactionModal from '../components/EditInvestmentTransactionModal'
 import { useHideAmounts } from '../hideAmounts'
+import PageHeader from '../components/PageHeader'
+import { useNextContribution } from '../components/plan/useNextContribution'
+import { fmtEur0 } from '../components/inicio/format'
 
 export const today = () => new Date().toISOString().slice(0, 10)
 export const parseDecimal = (s: string) => Math.abs(Number((s || '0').replace(/,/g, '.')))
@@ -149,7 +151,6 @@ function BalanceForm({ investment, onAdd }: { investment: Investment; onAdd: (da
 
 export default function InvestmentLedger() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const hideAmounts = useHideAmounts()
   const queryClient = useQueryClient()
   const { data: investments } = useQuery({ queryKey: ['investments'], queryFn: () => api.investments.list() })
@@ -165,6 +166,7 @@ export default function InvestmentLedger() {
     queryFn: () => api.investments.fxRate(quoteCurrency!),
   })
   const [editingTx, setEditingTx] = useState<InvestmentTransaction | null>(null)
+  const next = useNextContribution()
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ['investments'] })
@@ -216,23 +218,15 @@ export default function InvestmentLedger() {
   const sameType = (investments ?? []).filter((i) => i.active && i.type === investment.type)
   const typeTotal = sameType.reduce((sum, i) => sum + i.stats.valor_actual, 0)
   const showWeights = investment.type === 'fondo_inversion'
-  // Aportación (+) o retirada (−) en este fondo, solo en él, para que su peso entre los fondos activos
-  // llegue al objetivo: (v + x) / (T + x) = w  →  x = (w·T − v) / (1 − w).
-  const targetFraction = investment.target_weight / 100
-  const rebalanceAmount =
-    showWeights && investment.active && typeTotal > 0 && targetFraction > 0 && targetFraction < 1
-      ? (targetFraction * typeTotal - investment.stats.valor_actual) / (1 - targetFraction)
-      : null
 
   return (
-    <div>
-      <button type="button" onClick={() => navigate('/inversion')} className="mb-4 text-sm font-medium text-muted hover:text-fg">
-        ← Volver a Inversión
-      </button>
-      <h1 className={`${investment.isin ? 'mb-1' : 'mb-5'} text-2xl font-semibold tracking-tight`}>{investment.name}</h1>
-      {investment.isin && <p className="mb-5 text-sm text-muted">{investment.isin}</p>}
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col">
+      <PageHeader crumbs={[{ label: 'Inversión', to: '/inversion' }, { label: investment.name }]}>
+        {investment.isin && <span className="num ml-auto text-xs text-faint">{investment.isin}</span>}
+      </PageHeader>
+      <div className="h-3.5" />
 
-      <div className="card mb-5 grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="card mb-3.5 grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
         {!lumpSum && <Fact label="Participaciones">{investment.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</Fact>}
         <Fact label={lumpSum ? 'Total aportado' : 'Total invertido'}>
           <Money value={investment.stats.total_invertido} className={blur} />
@@ -261,16 +255,9 @@ export default function InvestmentLedger() {
             {investment.active && typeTotal > 0 ? `${((investment.stats.valor_actual / typeTotal) * 100).toFixed(1)}%` : '—'}
           </Fact>
         )}
-        {rebalanceAmount !== null && (
-          <Fact label="Ajuste al peso objetivo">
-            {Math.abs(rebalanceAmount) < 0.005 ? (
-              'En objetivo'
-            ) : (
-              <>
-                {rebalanceAmount > 0 ? 'Aportar ' : 'Retirar '}
-                <Money value={Math.abs(rebalanceAmount)} className={blur} />
-              </>
-            )}
+        {showWeights && investment.target_weight > 0 && next.amount > 0 && (
+          <Fact label={`Próxima aportación (de ${fmtEur0(next.amount)})`}>
+            <Money value={next.split.get(investment.id) ?? 0} className={blur} />
           </Fact>
         )}
         <Fact label="Plusvalía" className={gainColor}>
@@ -281,7 +268,7 @@ export default function InvestmentLedger() {
         </Fact>
       </div>
 
-      <div className="mb-5 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 items-stretch gap-3.5 lg:grid-cols-2">
         <div className="card h-full space-y-5 p-5">
           <div className="flex items-center justify-between rounded-lg border border-line bg-surface2/50 px-3 py-2.5 text-sm">
             <span className="text-muted">
@@ -306,47 +293,45 @@ export default function InvestmentLedger() {
           )}
         </div>
 
-        <HoldingHistoryChart investmentId={investment.id} transactionCount={investment.transactions.length} hideAmounts={hideAmounts} />
-      </div>
-
-      <div className="card p-5">
-        <p className="mb-2 text-sm font-medium text-fg">Histórico</p>
-        {sorted.length === 0 ? (
-          <p className="text-sm text-faint">Sin movimientos todavía</p>
-        ) : (
-          <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
-            {sorted.map((tx) => (
-              <li
-                key={tx.id}
-                onClick={() => setEditingTx(tx)}
-                className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2"
-              >
-                <span className="text-muted">
-                  {tx.date} ·{' '}
-                  {lumpSum
-                    ? tx.kind === 'adjustment'
-                      ? 'Ajuste de valor'
-                      : tx.amount >= 0
-                        ? 'Aportación'
-                        : 'Retirada'
-                    : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
-                  · <Money value={tx.amount} />
-                  {tx.note ? ` · ${tx.note}` : ''}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleRemoveTransaction(tx.id)
-                  }}
-                  className="shrink-0 text-faint hover:text-red-600"
+        <div className="card flex min-h-0 flex-col p-5 lg:order-first">
+          <p className="mb-2 text-sm font-medium text-fg">Histórico</p>
+          {sorted.length === 0 ? (
+            <p className="text-sm text-faint">Sin movimientos todavía</p>
+          ) : (
+            <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
+              {sorted.map((tx) => (
+                <li
+                  key={tx.id}
+                  onClick={() => setEditingTx(tx)}
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2"
                 >
-                  <TrashIcon />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <span className="text-muted">
+                    {tx.date} ·{' '}
+                    {lumpSum
+                      ? tx.kind === 'adjustment'
+                        ? 'Ajuste de valor'
+                        : tx.amount >= 0
+                          ? 'Aportación'
+                          : 'Retirada'
+                      : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
+                    · <Money value={tx.amount} />
+                    {tx.note ? ` · ${tx.note}` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveTransaction(tx.id)
+                    }}
+                    className="shrink-0 text-faint hover:text-red-600"
+                  >
+                    <TrashIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       {editingTx && (

@@ -25,7 +25,7 @@ export default function PendingAssignmentCard({
   const blur = hideAmounts ? 'select-none blur-sm' : ''
 
   return (
-    <div className="card mt-6 overflow-hidden border-amber-500/30 bg-amber-500/10">
+    <div className="card overflow-hidden border-amber-500/30 bg-amber-500/10">
       <div className="divide-y divide-amber-500/20">
         {unassigned.map((it) => {
           const activeHoldings = investments.filter((inv) => inv.account === it.account && inv.active)

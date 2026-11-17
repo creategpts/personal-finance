@@ -5,6 +5,9 @@ import RecurringModal from '../components/RecurringModal'
 import Money from '../components/Money'
 import { ExpandIcon, ShrinkIcon } from '../components/Icons'
 import { useHideAmounts } from '../hideAmounts'
+import PageHeader from '../components/PageHeader'
+import { PanelHeader } from '../components/inicio/ui'
+import { Info } from 'lucide-react'
 
 // "2026-08-09" -> "09/08/2026" (no TZ shift)
 const formatDate = (iso: string) => iso.split('-').reverse().join('/')
@@ -75,16 +78,22 @@ function RecurringTable({
   }
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold tracking-tight text-fg">{title}</h2>
-        <button onClick={onNew} className="btn-primary">
+    <section className="card min-w-0 overflow-hidden" aria-label={title}>
+      <PanelHeader
+        title={
+          <span className="flex items-center gap-1.5">
+            {title}
+            <span tabIndex={0} role="img" aria-label={description} title={description} className="inline-flex cursor-help normal-case text-faint hover:text-fg">
+              <Info size={13} />
+            </span>
+          </span>
+        }
+      >
+        <button onClick={onNew} className="text-xs font-medium text-muted transition hover:text-fg">
           {addLabel}
         </button>
-      </div>
-      <p className="mb-4 text-sm text-muted">{description}</p>
-
-      <div className="card overflow-hidden">
+      </PanelHeader>
+      <div>
         <table className="tbl hidden md:table">
           <thead>
             <tr>
@@ -248,7 +257,7 @@ function RecurringTable({
           )}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -301,10 +310,10 @@ export default function Planificacion() {
   }
 
   return (
-    <div>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Planificación</h1>
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-3.5">
+      <PageHeader crumbs={[{ label: 'Planificación' }]} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-3.5 lg:grid-cols-2">
         <RecurringTable
           title="Gastos recurrentes"
           addLabel="+ Nuevo gasto recurrente"

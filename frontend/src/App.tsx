@@ -1,22 +1,21 @@
 import { useEffect } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { AuthView, SignedIn, SignedOut } from '@neondatabase/auth/react/ui'
-import { ArrowLeftRight, ChartPie, Home, TrendingUp } from 'lucide-react'
-import Panel from './pages/Panel'
+import { ArrowLeftRight, Home, Map as MapIcon, TrendingUp } from 'lucide-react'
+import InicioNuevo from './pages/InicioNuevo'
 import Movimientos from './pages/Movimientos'
-import Analisis from './pages/Analisis'
 import Planificacion from './pages/Planificacion'
 import Inversion from './pages/Inversion'
 import InvestmentLedger from './pages/InvestmentLedger'
+import Plan from './pages/Plan'
 import Configuracion from './pages/Configuracion'
-import UserMenu from './components/UserMenu'
-import { loadSettings, useSettings } from './settings'
+import { loadSettings } from './settings'
 
 const navItems = [
   { to: '/', label: 'Inicio', end: true, icon: Home },
   { to: '/movimientos', label: 'Movimientos', end: false, icon: ArrowLeftRight },
   { to: '/inversion', label: 'Inversión', end: false, icon: TrendingUp },
-  { to: '/analisis', label: 'Análisis', end: false, icon: ChartPie },
+  { to: '/plan', label: 'Plan', end: false, icon: MapIcon },
 ]
 
 function AuthPage() {
@@ -29,7 +28,6 @@ function AuthPage() {
 }
 
 function Shell() {
-  const { app_name, favicon } = useSettings()
   const { pathname } = useLocation()
   useEffect(() => {
     loadSettings()
@@ -38,52 +36,18 @@ function Shell() {
     document.querySelector('main')?.scrollTo(0, 0)
   }, [pathname])
   return (
-    <div className="flex h-dvh flex-col overflow-hidden text-fg md:flex-row">
-      <header className="flex shrink-0 items-center justify-between border-b border-line bg-surface px-4 py-3 md:hidden">
-        <span className="flex items-center gap-2">
-          <span className="text-lg leading-none">{favicon}</span>
-          <span className="text-lg font-semibold tracking-tight">{app_name}</span>
-        </span>
-        <UserMenu openDown avatarOnly />
-      </header>
-
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface md:flex">
-        <span className="flex items-center gap-2 px-5 py-5">
-          <span className="text-lg leading-none">{favicon}</span>
-          <span className="text-lg font-semibold tracking-tight">{app_name}</span>
-        </span>
-        <nav className="flex flex-col gap-0.5 px-3">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm transition ${
-                  isActive
-                    ? 'bg-surface2 font-medium text-fg'
-                    : 'text-muted hover:bg-surface2 hover:text-fg'
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="mt-auto border-t border-line px-3 py-3">
-          <UserMenu />
-        </div>
-      </aside>
-
+    <div className="flex h-dvh flex-col overflow-hidden text-fg">
       <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-[1600px] flex-col px-4 py-5 pb-28 sm:px-6 md:h-full md:px-8 md:py-8 md:pb-8">
           <Routes>
-            <Route path="/" element={<Panel />} />
+            <Route path="/" element={<InicioNuevo />} />
+            <Route path="/inicio-nuevo" element={<Navigate to="/" replace />} />
             <Route path="/movimientos" element={<Movimientos />} />
-            <Route path="/analisis" element={<Analisis />} />
+            <Route path="/analisis" element={<Navigate to="/" replace />} />
             <Route path="/planificacion" element={<Planificacion />} />
             <Route path="/inversion" element={<Inversion />} />
             <Route path="/inversion/:id" element={<InvestmentLedger />} />
+            <Route path="/plan" element={<Plan />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Routes>
         </div>

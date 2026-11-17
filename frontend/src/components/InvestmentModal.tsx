@@ -3,6 +3,7 @@ import { api, type Category, type Investment, type InvestmentInput, type Investm
 import { INVESTMENT_TYPES_WITH_ISIN, INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import Modal from './Modal'
 import { TrashIcon } from './Icons'
+import DecimalInput from './DecimalInput'
 
 interface Props {
   initial?: Investment | null
@@ -168,13 +169,13 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
         <div className={type === 'seguros' ? '' : 'grid grid-cols-1 gap-4 sm:grid-cols-2'}>
           <Field label="Peso objetivo cartera">
             <div className="relative">
-              <input type="number" step="0.1" min="0" max="100" className="input pr-8" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} />
+              <DecimalInput className="input pr-8" value={targetWeight} onChange={setTargetWeight} />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-faint">%</span>
             </div>
           </Field>
           {type !== 'seguros' && (
             <Field label="Valor liquidativo actual">
-              <input type="number" step="0.0001" min="0" className="input" value={currentPrice} onChange={(e) => setCurrentPrice(e.target.value)} />
+              <DecimalInput className="input" value={currentPrice} onChange={setCurrentPrice} />
               {!hasIsin(type) && <span className="mt-1 block text-xs text-faint">Sin ISIN no hay precio en tiempo real — actualízalo aquí a mano</span>}
             </Field>
           )}

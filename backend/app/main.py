@@ -11,6 +11,7 @@ from . import models
 from .auth import NeonAuthMiddleware
 from .database import engine, SessionLocal
 from .seed import seed_categories
+from . import plan_logic
 from .routers import (
     categories,
     movements,
@@ -22,6 +23,7 @@ from .routers import (
     settings,
     goals,
     investments,
+    plan,
 )
 
 models.Base.metadata.create_all(bind=engine)
@@ -80,6 +82,9 @@ with SessionLocal() as db:
             snap_date = inv.price_updated_at.date() if inv.price_updated_at else date.today()
             db.add(models.PriceSnapshot(investment_id=inv.id, date=snap_date, price=inv.current_price))
     db.commit()
+    # ponytail: re-sync on boot so the emergency fund follows the phase in force; a daily job if boots get rare
+    if (plan_version := plan_logic.current(db)) is not None:
+        plan_logic.sync(db, plan_version.data, date.today())
 
 app = FastAPI(title="Life Track API")
 
@@ -102,6 +107,7 @@ app.include_router(backup.router)
 app.include_router(settings.router)
 app.include_router(goals.router)
 app.include_router(investments.router)
+app.include_router(plan.router)
 
 
 @app.get("/api/health")

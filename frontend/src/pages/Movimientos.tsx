@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type KpiName, type Movement, type MovementInput, type MovementStatus } from '../api'
 import { buildRows } from '../movementGroups'
@@ -7,14 +7,21 @@ import MovementModal from '../components/MovementModal'
 import BulkEditModal, { type BulkOverrides } from '../components/BulkEditModal'
 import GroupModal from '../components/GroupModal'
 import CsvPreviewModal from '../components/CsvPreviewModal'
-import AccountBar from '../components/AccountBar'
+import Accounts from '../components/inicio/Accounts'
+import PageHeader from '../components/PageHeader'
 import Money from '../components/Money'
 import { toCsv, parseCsv } from '../csv'
 import { isOrigin, isDestination } from '../categoryTypes'
 import { useHideAmounts } from '../hideAmounts'
 import PeriodSelector from '../components/PeriodSelector'
-import { ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
+import DecimalInput from '../components/DecimalInput'
 
+const MOBILE_PAGE_SIZE = 50
+
+function rowsThatFit(available: number, header: number, row: number) {
+  return Math.max(5, Math.floor((available - header) / (row || 41)))
+}
 const CSV_COLUMNS = ['date', 'concept', 'amount', 'status', 'origin', 'destination'] as const
 
 // "2026-08-09" -> "09/08/2026" (no TZ shift)
@@ -59,7 +66,6 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: () =>
 }
 
 export default function Movimientos() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   // KPI filter (income/expense/saving/investment): aggregates several origins/destinations,
   // so it can't be a single-field bar control -> lives in the URL, applied server-side, shown as a chip.
@@ -104,6 +110,8 @@ export default function Movimientos() {
   useEffect(() => {
     setFOrigin(searchParams.get('origin') ?? 'All')
     setFDestination(searchParams.get('destination') ?? 'All')
+    const status = searchParams.get('status')
+    setFStatus(status === 'Plan' || status === 'Done' ? status : 'All')
   }, [searchParams])
 
   function refresh() {
@@ -140,6 +148,29 @@ export default function Movimientos() {
   // catType lets the group total net expenses against incoming money / transfers.
   const catType = useMemo(() => new Map(categories.map((c) => [c.name, c.type])), [categories])
   const rows = useMemo(() => buildRows(sorted, catType), [sorted, catType])
+  const [page, setPage] = useState(0)
+  useEffect(() => setPage(0), [sortDir, fStatus, fOrigin, fDestination, fFrom, fTo, fMin, fMax])
+  const tableBox = useRef<HTMLDivElement>(null)
+  const [fitSize, setFitSize] = useState<number | null>(null)
+  useEffect(() => {
+    const box = tableBox.current
+    if (!box) return
+    const measure = () => {
+      const table = box.querySelector('table')
+      if (!table || table.offsetParent === null) return setFitSize(null)
+      const header = table.querySelector('thead')?.offsetHeight ?? 0
+      const row = (table.querySelector('tbody tr') as HTMLElement | null)?.offsetHeight ?? 0
+      setFitSize(rowsThatFit(box.clientHeight, header, row))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(box)
+    return () => observer.disconnect()
+  }, [rows.length > 0])
+  const PAGE_SIZE = fitSize ?? MOBILE_PAGE_SIZE
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const current = Math.min(page, pages - 1)
+  const pageRows = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE)
 
   // existing umbrella names, for the Agrupar datalist
   const existingGroups = useMemo(
@@ -425,9 +456,6 @@ export default function Movimientos() {
       >
         + Nuevo movimiento
       </button>
-      <button type="button" onClick={() => navigate('/planificacion')} className="btn whitespace-nowrap">
-        Planificados
-      </button>
       <button
         onClick={() => setMenuOpen((o) => !o)}
         className="btn hidden px-2 md:inline-flex"
@@ -457,15 +485,27 @@ export default function Movimientos() {
   )
 
   return (
-    <div className="flex flex-col md:h-full">
-      <div className="mb-5 hidden shrink-0 items-center justify-between gap-3 md:flex">
-        <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
-        {actionButtons}
-      </div>
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col md:h-full">
+      <PageHeader crumbs={[{ label: 'Movimientos' }]}>
+        <div className="ml-auto">
+          <PeriodSelector
+          fullWidth="mobile"
+          key={`${searchParams.get('from')}_${searchParams.get('to')}`}
+          initialFrom={searchParams.get('from') ?? undefined}
+          initialTo={searchParams.get('to') ?? undefined}
+          onChange={(from, to) => {
+            setFFrom(from)
+            setFTo(to)
+          }}
+        />
+        </div>
+      </PageHeader>
 
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
 
-      <AccountBar />
+      <div className="my-3.5 shrink-0">
+        <Accounts hide={hideAmounts} />
+      </div>
 
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 md:hidden">
         <button
@@ -485,43 +525,25 @@ export default function Movimientos() {
       <div
         className={`mb-3 grid shrink-0 grid-cols-2 gap-3 rounded-xl border border-line bg-surface p-3 md:flex md:flex-wrap md:items-end md:rounded-none md:border-0 md:bg-transparent md:p-0 ${filtersOpen ? '' : 'hidden md:flex'}`}
       >
-        <div className="col-span-2 text-xs font-medium text-muted md:col-span-1">
-          Periodo
-          <div className="mt-0.5">
-            <PeriodSelector
-              fullWidth="mobile"
-              key={`${searchParams.get('from')}_${searchParams.get('to')}`}
-              initialFrom={searchParams.get('from') ?? undefined}
-              initialTo={searchParams.get('to') ?? undefined}
-              onChange={(from, to) => {
-                setFFrom(from)
-                setFTo(to)
-              }}
-            />
-          </div>
-        </div>
-
         <div className="text-xs font-medium text-muted">
           Importe
           <div className="mt-0.5 flex w-full items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 transition focus-within:border-faint focus-within:ring-4 focus-within:ring-fg/10 md:w-auto">
-            <input
-              type="number"
-              step="0.01"
+            <DecimalInput
+              signed
               placeholder="mín"
               aria-label="Importe mín"
-              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] md:w-16 md:flex-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-0 flex-1 bg-transparent text-sm md:w-20 md:flex-none text-fg outline-none placeholder:text-faint"
               value={fMin}
-              onChange={(e) => setFMin(e.target.value)}
+              onChange={setFMin}
             />
             <span className="text-faint">–</span>
-            <input
-              type="number"
-              step="0.01"
+            <DecimalInput
+              signed
               placeholder="máx"
               aria-label="Importe máx"
-              className="w-0 flex-1 text-sm text-fg outline-none placeholder:text-faint [appearance:textfield] md:w-16 md:flex-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-0 flex-1 bg-transparent text-sm md:w-20 md:flex-none text-fg outline-none placeholder:text-faint"
               value={fMax}
-              onChange={(e) => setFMax(e.target.value)}
+              onChange={setFMax}
             />
           </div>
         </div>
@@ -590,12 +612,15 @@ export default function Movimientos() {
             Limpiar
           </button>
         )}
+
+        <div className="ml-auto hidden md:block">{actionButtons}</div>
       </div>
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
-        <div className="card md:min-h-0 md:flex-1 md:overflow-auto">
+        <div className="card flex min-w-0 flex-col overflow-hidden md:min-h-0 md:flex-1">
+        <div ref={tableBox} className="md:min-h-0 md:flex-1 md:overflow-auto">
         <table className="tbl hidden md:table">
-          <thead className="sticky top-0 z-10">
+          <thead>
             <tr>
               <th
                 className="cursor-pointer select-none"
@@ -614,7 +639,7 @@ export default function Movimientos() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {pageRows.map((row) => {
               if (row.kind === 'single') return movementRow(row.m)
               const isOpen = expanded.has(row.name)
               const groupSelected = row.members.every((m) => selected.has(m.id))
@@ -656,7 +681,7 @@ export default function Movimientos() {
 
         <div className="divide-y divide-linesoft md:hidden">
           {rows.length === 0 && <div className="px-4 py-10 text-center text-faint">Sin movimientos</div>}
-          {rows.map((row) => {
+          {pageRows.map((row) => {
             if (row.kind === 'single') return movementCard(row.m)
             const isOpen = expanded.has(row.name)
             const groupSelected = row.members.every((m) => selected.has(m.id))
@@ -686,6 +711,25 @@ export default function Movimientos() {
             )
           })}
         </div>
+        </div>
+        {rows.length > 0 && (fitSize != null || rows.length > PAGE_SIZE) && (
+          <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2 text-xs text-muted">
+            <span className="num">
+              {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, rows.length)} de {rows.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <button type="button" className="btn px-2 py-1 disabled:opacity-40" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="Página anterior">
+                <ChevronLeft size={14} />
+              </button>
+              <span className="num px-1.5">
+                {current + 1} / {pages}
+              </span>
+              <button type="button" className="btn px-2 py-1 disabled:opacity-40" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label="Página siguiente">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
         </div>
         {selected.size > 0 && (
           <aside className="w-full shrink-0 self-start rounded-xl border border-line bg-surface p-4 md:w-56">

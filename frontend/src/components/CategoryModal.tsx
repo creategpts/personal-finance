@@ -3,6 +3,7 @@ import type { Category, CategoryType } from '../api'
 import { TrashIcon } from './Icons'
 import IconPicker from './IconPicker'
 import Modal from './Modal'
+import DecimalInput from './DecimalInput'
 
 const DEFAULT_ICON = 'Tag'
 
@@ -176,12 +177,11 @@ export default function CategoryModal({
         {showBalance && (
           <label className="block text-sm">
             Saldo inicial (antes de los movimientos registrados)
-            <input
-              type="number"
-              step="0.01"
+            <DecimalInput
+              signed
               className="mt-1.5 input"
               value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
+              onChange={setInitialBalance}
             />
           </label>
         )}

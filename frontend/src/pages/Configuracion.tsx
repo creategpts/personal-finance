@@ -7,6 +7,7 @@ import InfoHint from '../components/InfoHint'
 import CategoryModal from '../components/CategoryModal'
 import CategoryIcon from '../components/CategoryIcon'
 import { useSettings, saveSettings } from '../settings'
+import PageHeader from '../components/PageHeader'
 
 function SimpleCategoryList({
   title,
@@ -805,10 +806,10 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="flex flex-col md:h-full">
-      <h1 className="mb-5 shrink-0 text-2xl font-semibold tracking-tight">Configuración</h1>
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col md:h-full">
+      <PageHeader crumbs={[{ label: 'Configuración' }]} />
 
-      <div className="mb-5 inline-flex shrink-0 flex-wrap gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
+      <div className="my-3.5 inline-flex shrink-0 flex-wrap gap-0.5 self-start rounded-lg border border-line bg-surface p-0.5">
         {([
           ['general', 'General'],
           ['cuentas', 'Cuentas'],

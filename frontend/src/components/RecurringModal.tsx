@@ -3,6 +3,7 @@ import type { Category, RecurringExpense, RecurringExpenseInput } from '../api'
 import { isOrigin, isDestination } from '../categoryTypes'
 import { TrashIcon } from './Icons'
 import Modal from './Modal'
+import DecimalInput from './DecimalInput'
 
 interface Props {
   categories: Category[]
@@ -125,13 +126,11 @@ export default function RecurringModal({ categories, initial, defaultOrigin, onC
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             Importe
-            <input
+            <DecimalInput
               required
-              type="number"
-              step="0.01"
               className="mt-1.5 input"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
             />
           </label>
           <label className="block text-sm">

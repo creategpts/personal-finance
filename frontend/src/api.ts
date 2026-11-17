@@ -358,6 +358,60 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
+export interface PlanPhase {
+  name: string
+  months: number
+  contribution: number
+  frequency: 'monthly' | 'biweekly'
+  emergency_fund: number
+  note: string
+  weight_tolerance: number
+  allocation: PlanAllocation[]
+  dry_powder: number
+  dips: PlanDip[]
+  reserve_tiers: ReserveTier[]
+  initial_capital: number
+  monthly_income: number | null
+  monthly_expense: number | null
+}
+
+export interface PlanDip {
+  drop: number
+  amount: number
+}
+
+export interface ReserveTier {
+  below: number
+  amount: number
+}
+
+export interface PlanAllocation {
+  investment_id: number
+  name: string
+  weight: number
+}
+
+export interface DipShot {
+  id: number
+  created_at: string
+  phase_index: number
+  drop: number
+  amount: number
+}
+
+export interface PlanData {
+  summary: string
+  start_month: string
+  phases: PlanPhase[]
+}
+
+export interface PlanVersion {
+  id: number
+  created_at: string
+  reason: string
+  data: PlanData
+}
+
 export const api = {
   categories: {
     list: () => request<Category[]>('/categories'),
@@ -440,6 +494,14 @@ export const api = {
     get: () => request<Record<string, string>>('/settings'),
     set: (data: Record<string, string>) =>
       request<Record<string, string>>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  plan: {
+    current: () => request<PlanVersion | null>('/plan'),
+    versions: () => request<PlanVersion[]>('/plan/versions'),
+    save: (reason: string, data: PlanData) => request<PlanVersion>('/plan', { method: 'POST', body: JSON.stringify({ reason, data }) }),
+    shots: (phaseIndex: number) => request<DipShot[]>(`/plan/shots?phase_index=${phaseIndex}`),
+    fire: (shot: Omit<DipShot, 'id' | 'created_at'>) => request<DipShot>('/plan/shots', { method: 'POST', body: JSON.stringify(shot) }),
+    undoShot: (id: number) => request<void>(`/plan/shots/${id}`, { method: 'DELETE' }),
   },
   investments: {
     list: () => request<Investment[]>('/investments'),

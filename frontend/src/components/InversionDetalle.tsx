@@ -1,4 +1,5 @@
-import type { Investment, InvestmentType } from '../api'
+import { useQuery } from '@tanstack/react-query'
+import { api, type Investment, type InvestmentType } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import HoldingsTable from './HoldingsTable'
 
@@ -11,6 +12,7 @@ export default function InversionDetalle({
   hideAmounts: boolean
   onEditInvestment: (inv: Investment) => void
 }) {
+  const { data: market } = useQuery({ queryKey: ['investments-market'], queryFn: () => api.investments.market() })
   const byType = new Map<InvestmentType, Investment[]>()
   for (const inv of investments) {
     const group = byType.get(inv.type) ?? []
@@ -23,7 +25,7 @@ export default function InversionDetalle({
   )
 
   return (
-    <div>
+    <div className="flex flex-col gap-3.5">
       {groups.map(([type, holdings]) => (
         <HoldingsTable
           key={type}
@@ -34,6 +36,7 @@ export default function InversionDetalle({
           showUnits={type !== 'fondo_inversion'}
           hideAmounts={hideAmounts}
           onEdit={onEditInvestment}
+          funds={type === 'fondo_inversion' ? market?.funds : undefined}
         />
       ))}
 

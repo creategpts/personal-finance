@@ -1,6 +1,8 @@
 from datetime import date as date_type, datetime
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import (
     MovementStatus,
@@ -356,3 +358,81 @@ class PendingAllocation(BaseModel):
 class AssignPendingRequest(BaseModel):
     date: date_type
     allocations: list[PendingAllocation]
+
+
+class PlanDip(BaseModel):
+    drop: float = Field(gt=0, le=100)
+    amount: float = Field(ge=0)  # euros injected when this drop is reached
+
+
+class ReserveTier(BaseModel):
+    below: float = Field(gt=0, le=100)  # applies while the phase index is less than this % below its peak
+    amount: float = Field(ge=0)  # euros per month diverted from the contribution to emergency fund + dry powder
+
+
+class PlanAllocation(BaseModel):
+    investment_id: int
+    name: str
+    weight: float = Field(ge=0, le=100)
+
+
+class PlanPhase(BaseModel):
+    name: str
+    months: float = Field(gt=0)
+    contribution: float = Field(ge=0)
+    frequency: Literal["monthly", "biweekly"] = "monthly"
+    emergency_fund: float = Field(ge=0, default=0)  # total reserve while this phase is active
+    note: str = ""
+    weight_tolerance: float = Field(ge=0, default=2)
+    allocation: list[PlanAllocation] = []
+    dry_powder: float = Field(ge=0, default=0)
+    reserve_tiers: list[ReserveTier] = []
+    dips: list[PlanDip] = []  # drop measured on the phase's weighted index of its funds, never per fund
+    initial_capital: float = Field(ge=0, default=0)  # portfolio at phase start: reference only, never in projections
+    monthly_income: float | None = None
+    monthly_expense: float | None = None
+
+    @model_validator(mode="after")
+    def _weights_sum_100(self):
+        total = sum(a.weight for a in self.allocation)
+        if self.allocation and abs(total - 100) > 0.01:
+            raise ValueError(f"La asignación de «{self.name}» debe sumar 100 % (suma {total:g} %)")
+        return self
+
+
+class PlanData(BaseModel):
+    summary: str = ""
+    start_month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    phases: list[PlanPhase] = Field(min_length=1)
+
+
+class PlanVersionIn(BaseModel):
+    reason: str = Field(min_length=1)
+    data: PlanData
+
+    @field_validator("reason")
+    @classmethod
+    def _reason_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("El motivo es obligatorio")
+        return v.strip()
+
+
+class PlanVersionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    created_at: datetime
+    reason: str
+    data: PlanData
+
+
+class DipShotIn(BaseModel):
+    phase_index: int = Field(ge=0)
+    drop: float = Field(gt=0, le=100)
+    amount: float = Field(ge=0)
+
+
+class DipShotOut(DipShotIn):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    created_at: datetime

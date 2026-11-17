@@ -279,3 +279,29 @@ class RecurringExpense(Base):
     # when False: tracked for year-view analysis only, never auto-creates a Movement
     # (e.g. no-fixed-date expenses like haircut, ITV, car service).
     auto_generate = Column(Boolean, nullable=False, default=True)
+
+
+class PlanVersion(Base):
+    """One immutable snapshot of the investment plan (schemas.PlanData as JSON).
+    The current plan is the latest row; every edit appends a version with its reason,
+    so changes to the plan stay visible instead of silently overwriting it."""
+
+    __tablename__ = "plan_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    reason = Column(String, nullable=False)
+    data = Column(JSON, nullable=False)
+
+
+class DipShot(Base):
+    """A buy-the-dip shot actually fired: dry powder spent when the phase's weighted index fell to one drop level."""
+
+    __tablename__ = "dip_shots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # ponytail: keyed by phase position; reordering phases in a new plan version re-labels past shots
+    phase_index = Column(Integer, nullable=False, index=True)
+    drop = Column(Float, nullable=False)
+    amount = Column(Float, nullable=False)

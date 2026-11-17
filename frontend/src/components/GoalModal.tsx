@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Category, Goal, GoalCreateInput, GoalTargetInput, GoalType } from '../api'
 import { TrashIcon } from './Icons'
 import Modal from './Modal'
+import DecimalInput from './DecimalInput'
 
 interface Props {
   accounts: Category[] // saving/investment accounts only
@@ -79,7 +80,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
       return (
         <Field label="Importe mensual">
           <Adorned suffix="€">
-            <input required type="number" step="0.01" min="0" className="input pr-8" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <DecimalInput required className="input pr-8" value={amount} onChange={setAmount} />
           </Adorned>
         </Field>
       )
@@ -87,7 +88,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
       return (
         <Field label="Porcentaje de ingresos">
           <Adorned suffix="%">
-            <input required type="number" step="0.1" min="0" className="input pr-8" value={percent} onChange={(e) => setPercent(e.target.value)} />
+            <DecimalInput required className="input pr-8" value={percent} onChange={setPercent} />
           </Adorned>
         </Field>
       )
@@ -95,7 +96,7 @@ export default function GoalModal({ accounts, initial, onClose, onCreate, onUpda
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Meta total">
           <Adorned suffix="€">
-            <input required type="number" step="0.01" min="0" className="input pr-8" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} />
+            <DecimalInput required className="input pr-8" value={targetAmount} onChange={setTargetAmount} />
           </Adorned>
         </Field>
         <Field label="Fecha límite">
