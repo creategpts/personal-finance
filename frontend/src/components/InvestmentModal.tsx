@@ -36,6 +36,7 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
   const [account, setAccount] = useState(initial?.account ?? initialAccount ?? accounts[0]?.name ?? '')
   const [targetWeight, setTargetWeight] = useState(initial?.target_weight?.toString() ?? '0')
   const [currentPrice, setCurrentPrice] = useState(initial?.current_price?.toString() ?? '0')
+  const [infoUrl, setInfoUrl] = useState(initial?.info_url ?? '')
   const [active, setActive] = useState(initial?.active ?? true)
   const [busy, setBusy] = useState(false)
   // confirmación en la propia página: window.confirm no funciona en todos los navegadores integrados
@@ -77,6 +78,7 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
         account: account || null,
         target_weight: Number(targetWeight),
         ft_symbol: ftSymbol,
+        info_url: infoUrl.trim() || null,
         active,
         current_price: Number(currentPrice),
       })
@@ -180,6 +182,17 @@ export default function InvestmentModal({ initial, accounts, initialAccount, onC
             </Field>
           )}
         </div>
+
+        <Field label="URL de más información">
+          <input
+            type="url"
+            pattern="https?://.*"
+            className="input"
+            placeholder="https://es.investing.com/funds/…"
+            value={infoUrl}
+            onChange={(e) => setInfoUrl(e.target.value)}
+          />
+        </Field>
 
         {editing && onRefreshPrice && isin && (
           <button type="button" disabled={busy} onClick={onRefreshPrice} className="btn text-sm">

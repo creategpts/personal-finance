@@ -55,6 +55,7 @@ def _serialize(inv: models.Investment) -> schemas.InvestmentOut:
         account=inv.account,
         target_weight=inv.target_weight,
         ft_symbol=inv.ft_symbol,
+        info_url=inv.info_url,
         active=inv.active,
         current_price=inv.current_price,
         price_updated_at=inv.price_updated_at,
@@ -103,6 +104,7 @@ def create_investment(payload: schemas.InvestmentCreate, db: Session = Depends(g
         account=payload.account,
         target_weight=payload.target_weight,
         ft_symbol=ft_symbol,
+        info_url=payload.info_url,
         active=payload.active,
     )
     # El precio inicial se pide aquí y no depende de que el formulario haya hecho la búsqueda
@@ -136,6 +138,7 @@ def update_investment(investment_id: int, payload: schemas.InvestmentUpdate, db:
     inv.isin, inv.ft_symbol = _split_isin(payload.isin, payload.ft_symbol)
     inv.account = payload.account
     inv.target_weight = payload.target_weight
+    inv.info_url = payload.info_url
     inv.active = payload.active
     if payload.current_price is not None:
         inv.current_price = payload.current_price
@@ -231,29 +234,6 @@ def refresh_price(investment_id: int, db: Session = Depends(get_db)):
     return schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price)
 
 
-@router.post("/refresh-prices", response_model=list[schemas.PriceRefreshResult])
-def refresh_all_prices(db: Session = Depends(get_db)):
-    results = []
-    for inv in db.query(models.Investment).all():
-        symbol = ft_price.symbol_for(inv.ft_symbol, inv.isin)
-        if not symbol:
-            continue
-        try:
-            price = ft_price.fetch_ft_price_eur(symbol)
-        except Exception as e:
-            results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=False, error=str(e)))
-            continue
-        inv.current_price = price
-        inv.price_updated_at = datetime.utcnow()
-        _heal_symbol(inv, symbol)
-        _record_snapshot(inv, price)
-        results.append(schemas.PriceRefreshResult(investment_id=inv.id, ok=True, price=price))
-    db.flush()
-    investment_movements.sync_current_month_revalorization(db)
-    db.commit()
-    return results
-
-
 # ponytail: 10 years is "enough" ATH for index funds; FT's ajax takes any range, so
 # raise this if a fund's real high predates it.
 HISTORY_YEARS = 10
@@ -261,7 +241,7 @@ SYNC_THROTTLE = timedelta(minutes=10)
 
 
 @router.post("/{investment_id}/sync-market", response_model=schemas.MarketSyncResult)
-def sync_market(investment_id: int, db: Session = Depends(get_db)):
+def sync_market(investment_id: int, force: bool = False, db: Session = Depends(get_db)):
     """Refresh today's price and top up the daily history. One call per holding (the
     client fires them in parallel) so a first 10-year backfill of several funds
     doesn't have to fit in a single serverless request."""
@@ -278,7 +258,7 @@ def sync_market(investment_id: int, db: Session = Depends(get_db)):
         db.flush()
         inv.price_updated_at = None  # sin esto el límite de 10 min se saltaría la descarga
     last = db.query(models.PriceHistory.date).filter_by(investment_id=inv.id).order_by(models.PriceHistory.date.desc()).first()
-    if last and inv.price_updated_at and datetime.utcnow() - inv.price_updated_at < SYNC_THROTTLE:
+    if not force and last and inv.price_updated_at and datetime.utcnow() - inv.price_updated_at < SYNC_THROTTLE:
         return schemas.MarketSyncResult(investment_id=inv.id, ok=True, skipped=True)
     today = date.today()
     start = last[0] + timedelta(days=1) if last else today.replace(year=today.year - HISTORY_YEARS)

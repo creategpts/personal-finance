@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Crosshair, Info } from 'lucide-react'
 import { api, type PlanData } from '../../api'
 import { COLOR_ACCENT, COLOR_CRITICAL, COLOR_GOOD, fmtEur0, fmtNum, fmtPct, sgn, shortDate } from './format'
 import { Amount } from './ui'
+import { PricesUpdatedAt } from '../../marketSync'
 import { expectedToDate, monthLabel, phaseColor, schedule } from '../plan/planMath'
 import { useDryPowder } from '../plan/useDryPowder'
 import { useNextContribution } from '../plan/useNextContribution'
@@ -20,11 +21,11 @@ function PhaseHero({ plan, invested, hide }: { plan: PlanData; invested: number;
   return (
     <>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <Link to="/plan" className="flex items-center gap-2 text-sm font-semibold text-fg hover:underline">
+        <span className="flex items-center gap-2 text-sm font-semibold text-fg">
           <span className="h-2 w-2 rounded-full" style={{ background: phaseColor(index) }} />
           Fase {index + 1}
           {row.phase.name && ` · ${row.phase.name}`}
-        </Link>
+        </span>
         <span className="num text-xs text-muted">
           mes {monthInPhase} de {row.end - row.start} · <Amount hide={hide}>{fmtEur0(row.phase.contribution)}</Amount>/{FREQ_LABEL[row.phase.frequency]} · hasta{' '}
           {monthLabel(plan, row.end)}
@@ -65,9 +66,7 @@ function BuyOpportunities({ hide }: { hide: boolean }) {
     <div className="px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <h4 className="text-[13px] font-semibold text-fg">Oportunidades de compra</h4>
-        <Link to="/inversion" className="text-[11.5px] text-faint hover:text-fg">
-          Inversión →
-        </Link>
+        <PricesUpdatedAt />
       </div>
       {phaseIndex == null || dips.length === 0 ? (
         <p className="py-4 text-sm text-faint">La fase activa no tiene disparos de pólvora seca.</p>
@@ -219,6 +218,7 @@ export default function PatrimonioPlan({ hide }: { hide: boolean }) {
   const { data: plan = null } = useQuery({ queryKey: ['plan'], queryFn: () => api.plan.current() })
   const { data: portfolioSummary = null } = useQuery({ queryKey: ['investments-summary'], queryFn: () => api.investments.summary() })
   const patrimonio = usePatrimonio()
+  const navigate = useNavigate()
 
   const phaseIndex = plan ? expectedToDate(plan.data).index : null
   const phase = plan && phaseIndex != null ? plan.data.phases[phaseIndex] : null
@@ -240,19 +240,26 @@ export default function PatrimonioPlan({ hide }: { hide: boolean }) {
           )}
         </div>
         <div className="flex min-w-0 flex-col divide-y divide-line">
-          <div className="px-4 py-4">
-            {plan ? (
+          {plan ? (
+            <Link to="/plan" className="block px-4 py-4 transition hover:bg-surface2/40">
               <PhaseHero plan={plan.data} invested={(portfolioSummary?.total_invertido ?? 0) - (plan.data.phases[0]?.initial_capital ?? 0)} hide={hide} />
-            ) : (
-              <p className="text-sm text-faint">
-                Aún no hay plan guardado.{' '}
-                <Link to="/plan" className="font-medium text-fg hover:underline">
-                  Crear el plan →
-                </Link>
-              </p>
-            )}
-          </div>
-          <div className="grid flex-1 divide-y divide-line xl:grid-cols-2 xl:divide-x xl:divide-y-0">
+            </Link>
+          ) : (
+            <p className="px-4 py-4 text-sm text-faint">
+              Aún no hay plan guardado.{' '}
+              <Link to="/plan" className="font-medium text-fg hover:underline">
+                Crear el plan →
+              </Link>
+            </p>
+          )}
+          <div
+            role="link"
+            tabIndex={0}
+            aria-label="Ir a Inversión"
+            onClick={(e) => !(e.target as Element).closest('a') && navigate('/inversion')}
+            onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && navigate('/inversion')}
+            className="grid flex-1 cursor-pointer divide-y divide-line transition hover:bg-surface2/40 xl:grid-cols-2 xl:divide-x xl:divide-y-0"
+          >
             <NextContribution tolerance={tolerance} hide={hide} />
             <BuyOpportunities hide={hide} />
           </div>

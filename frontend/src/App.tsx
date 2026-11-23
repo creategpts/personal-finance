@@ -10,6 +10,7 @@ import InvestmentLedger from './pages/InvestmentLedger'
 import Plan from './pages/Plan'
 import Configuracion from './pages/Configuracion'
 import { loadSettings } from './settings'
+import { useMarketSync } from './marketSync'
 
 const navItems = [
   { to: '/', label: 'Inicio', end: true, icon: Home },
@@ -29,6 +30,7 @@ function AuthPage() {
 
 function Shell() {
   const { pathname } = useLocation()
+  useMarketSync()
   useEffect(() => {
     loadSettings()
   }, [])

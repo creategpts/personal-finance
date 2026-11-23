@@ -187,6 +187,7 @@ class Investment(Base):
     # FT tearsheet symbol (the "s=" query param, e.g. "LU1234567890:EUR") used to
     # scrape current_price on demand. Null = price is set manually only.
     ft_symbol = Column(String, nullable=True)
+    info_url = Column(String, nullable=True)  # enlace externo (p. ej. investing.com) puesto a mano
     active = Column(Boolean, nullable=False, default=True)
 
     transactions = relationship(

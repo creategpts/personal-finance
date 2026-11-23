@@ -211,6 +211,7 @@ export interface Investment {
   account: string | null
   target_weight: number
   ft_symbol: string | null
+  info_url: string | null
   active: boolean
   current_price: number
   price_updated_at: string | null
@@ -225,6 +226,7 @@ export type InvestmentInput = {
   account: string | null
   target_weight: number
   ft_symbol: string | null
+  info_url: string | null
   active: boolean
   current_price?: number
 }
@@ -518,7 +520,6 @@ export const api = {
       request<Investment>(`/investments/${id}/transactions/${transactionId}`, { method: 'DELETE' }),
     refreshPrice: (id: number) =>
       request<PriceRefreshResult>(`/investments/${id}/refresh-price`, { method: 'POST' }),
-    refreshAllPrices: () => request<PriceRefreshResult[]>('/investments/refresh-prices', { method: 'POST' }),
     fxRate: (currency: string) => request<{ currency: string; rate: number }>(`/investments/fx/${encodeURIComponent(currency)}`),
     priceLookup: (isin: string) => request<PriceLookupResult>(`/investments/price-lookup?isin=${encodeURIComponent(isin)}`),
     accountCheck: () => request<AccountCheckItem[]>('/investments/account-check'),
@@ -531,7 +532,7 @@ export const api = {
       request<PortfolioHistoryPoint[]>(`/investments/history${type ? `?type=${type}` : ''}`),
     historyFor: (id: number) => request<PortfolioHistoryPoint[]>(`/investments/${id}/history`),
     market: () => request<MarketOverview>('/investments/market'),
-    syncMarket: (id: number) => request<MarketSyncResult>(`/investments/${id}/sync-market`, { method: 'POST' }),
+    syncMarket: (id: number, force = false) => request<MarketSyncResult>(`/investments/${id}/sync-market${force ? '?force=true' : ''}`, { method: 'POST' }),
     summary: () => request<PortfolioSummary>('/investments/summary'),
     composition: () => request<PortfolioCompositionItem[]>('/investments/composition'),
   },

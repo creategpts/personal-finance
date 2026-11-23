@@ -237,7 +237,18 @@ class InvestmentBase(BaseModel):
     account: str | None = None  # Category.name of the Cuenta (type='inversion') this holding sits in
     target_weight: float = 0
     ft_symbol: str | None = None  # FT tearsheet "s=" param, e.g. "LU1234567890:EUR"
+    info_url: str | None = None
     active: bool = True
+
+    @field_validator("info_url")
+    @classmethod
+    def _http_url(cls, v: str | None) -> str | None:
+        v = (v or "").strip()
+        if not v:
+            return None
+        if not v.lower().startswith(("http://", "https://")):
+            raise ValueError("La URL debe empezar por http:// o https://")
+        return v
 
 
 class InvestmentCreate(InvestmentBase):

@@ -3,15 +3,7 @@ import { api, type Investment, type InvestmentType } from '../api'
 import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
 import HoldingsTable from './HoldingsTable'
 
-export default function InversionDetalle({
-  investments,
-  hideAmounts,
-  onEditInvestment,
-}: {
-  investments: Investment[]
-  hideAmounts: boolean
-  onEditInvestment: (inv: Investment) => void
-}) {
+export default function InversionDetalle({ investments, hideAmounts }: { investments: Investment[]; hideAmounts: boolean }) {
   const { data: market } = useQuery({ queryKey: ['investments-market'], queryFn: () => api.investments.market() })
   const byType = new Map<InvestmentType, Investment[]>()
   for (const inv of investments) {
@@ -20,8 +12,7 @@ export default function InversionDetalle({
     byType.set(inv.type, group)
   }
   const groups = [...byType.entries()].sort(
-    ([, a], [, b]) =>
-      b.reduce((sum, inv) => sum + inv.stats.total_invertido, 0) - a.reduce((sum, inv) => sum + inv.stats.total_invertido, 0)
+    ([, a], [, b]) => b.reduce((sum, inv) => sum + inv.stats.total_invertido, 0) - a.reduce((sum, inv) => sum + inv.stats.total_invertido, 0),
   )
 
   return (
@@ -34,8 +25,8 @@ export default function InversionDetalle({
           lumpSum={type === 'seguros'}
           showWeights={type === 'fondo_inversion'}
           showUnits={type !== 'fondo_inversion'}
+          brief={type === 'fondo_inversion'}
           hideAmounts={hideAmounts}
-          onEdit={onEditInvestment}
           funds={type === 'fondo_inversion' ? market?.funds : undefined}
         />
       ))}

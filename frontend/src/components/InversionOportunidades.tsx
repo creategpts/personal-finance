@@ -1,15 +1,13 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useIsFetching, useQuery } from '@tanstack/react-query'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, type MarketFund } from '../api'
 import { useDryPowder } from './plan/useDryPowder'
 import PortfolioDips from './PortfolioDips'
 
 const AXIS_COLOR = '#a3a3a3'
-const REFRESH_MS = 5 * 60 * 1000
 
-export type RefKey = 'high_52w' | 'all_time_high' | 'avg_cost'
+export type RefKey = 'all_time_high' | 'avg_cost'
 export const REFS: { key: RefKey; label: string; color: string }[] = [
-  { key: 'high_52w', label: 'Máx. 52 sem.', color: '#2563eb' },
   { key: 'all_time_high', label: 'Máx. histórico', color: '#9333ea' },
   { key: 'avg_cost', label: 'Coste medio', color: '#d97706' },
 ]
@@ -55,32 +53,11 @@ function shortDate(iso: string) {
   return `${d}/${m}/${y!.slice(2)}`
 }
 
-export default function InversionOportunidades({
-  syncIds,
-  hideAmounts,
-}: {
-  syncIds: number[]
-  hideAmounts: boolean
-}) {
-  const queryClient = useQueryClient()
-
+export default function InversionOportunidades({ hideAmounts }: { hideAmounts: boolean }) {
   const { data: market } = useQuery({ queryKey: ['investments-market'], queryFn: () => api.investments.market() })
   const { phaseIndex, phase } = useDryPowder()
 
-  // Pull fresh prices (and top up history) on entering, then every few minutes while
-  // the page stays open. The server throttles per fund, so extra calls are cheap.
-  const syncKey = syncIds.join(',')
-  const { isFetching: syncing, dataUpdatedAt } = useQuery({
-    queryKey: ['investments-market-sync', syncKey],
-    enabled: syncIds.length > 0,
-    refetchInterval: REFRESH_MS,
-    queryFn: async () => {
-      const results = await Promise.all(syncIds.map((id) => api.investments.syncMarket(id).catch(() => null)))
-      await queryClient.invalidateQueries({ queryKey: ['investments-market'] })
-      return results
-    },
-  })
-
+  const syncing = useIsFetching({ queryKey: ['investments-market-sync'] }) > 0
 
   const funds = market?.funds ?? []
 
@@ -92,10 +69,7 @@ export default function InversionOportunidades({
           {syncing ? 'Descargando histórico de precios…' : 'Ningún fondo con ISIN o símbolo FT para seguir'}
         </p>
       ) : phase && phaseIndex != null ? (
-        <PortfolioDips
-          hideAmounts={hideAmounts}
-          status={`${syncing ? 'Actualizando precios…' : dataUpdatedAt ? `Precios al ${new Date(dataUpdatedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : ''} · los fondos publican un valor liquidativo al día`}
-        />
+        <PortfolioDips hideAmounts={hideAmounts} status={`${syncing ? 'Actualizando precios… · ' : ''}los fondos publican un valor liquidativo al día`} />
       ) : (
         <p className="px-4 py-3 text-sm text-faint">
           <span className="mr-3 font-semibold text-fg">Oportunidades de compra</span>
@@ -129,7 +103,7 @@ export function FundChart({
   const pad = (hi - lo) * 0.05 || 1
 
   return (
-    <div className="flex min-w-0 flex-col p-4">
+    <div className="flex min-w-0 flex-1 flex-col p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-3">
           {REFS.map((r) => (
@@ -153,24 +127,34 @@ export function FundChart({
           ))}
         </div>
       </div>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-            <CartesianGrid stroke="var(--line)" vertical={false} />
-            <XAxis dataKey="label" stroke={AXIS_COLOR} fontSize={12} tickLine={false} axisLine={{ stroke: 'var(--line)' }} minTickGap={48} />
-            <YAxis stroke={AXIS_COLOR} fontSize={12} tickLine={false} axisLine={false} width={56} domain={[lo - pad, hi + pad]} tickFormatter={(v: number) => v.toFixed(0)} />
-            <Tooltip
-              formatter={(v) => `${price.format(Number(v))} €`}
-              contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 13 }}
-              labelStyle={{ color: 'var(--fg)', fontWeight: 600, marginBottom: 4 }}
-              cursor={{ stroke: 'var(--line)' }}
-            />
-            {lines.map((r) => (
-              <ReferenceLine key={r.key} y={fund[r.key]!} stroke={r.color} strokeDasharray="5 4" strokeWidth={1.5} />
-            ))}
-            <Line type="monotone" dataKey="price" name="Valor liquidativo" stroke="#16a34a" strokeWidth={2} dot={false} isAnimationActive={false} />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="relative min-h-72 flex-1">
+        <div className="absolute inset-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+              <CartesianGrid stroke="var(--line)" vertical={false} />
+              <XAxis dataKey="label" stroke={AXIS_COLOR} fontSize={12} tickLine={false} axisLine={{ stroke: 'var(--line)' }} minTickGap={48} />
+              <YAxis
+                stroke={AXIS_COLOR}
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                width={56}
+                domain={[lo - pad, hi + pad]}
+                tickFormatter={(v: number) => v.toFixed(0)}
+              />
+              <Tooltip
+                formatter={(v) => `${price.format(Number(v))} €`}
+                contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 13 }}
+                labelStyle={{ color: 'var(--fg)', fontWeight: 600, marginBottom: 4 }}
+                cursor={{ stroke: 'var(--line)' }}
+              />
+              {lines.map((r) => (
+                <ReferenceLine key={r.key} y={fund[r.key]!} stroke={r.color} strokeDasharray="5 4" strokeWidth={1.5} />
+              ))}
+              <Line type="monotone" dataKey="price" name="Valor liquidativo" stroke="#16a34a" strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

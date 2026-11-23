@@ -1,77 +1,17 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type Investment, type InvestmentTransaction, type InvestmentTransactionInput } from '../api'
-import { INVESTMENT_TYPE_LABELS } from '../investmentColors'
+import { api, type Investment, type InvestmentInput, type MarketFund, type InvestmentTransaction, type InvestmentTransactionInput } from '../api'
+import { FundChart, store, stored, type RefKey } from '../components/InversionOportunidades'
 import Money from '../components/Money'
-import { TrashIcon } from '../components/Icons'
+import { PencilIcon, TrashIcon } from '../components/Icons'
+import InvestmentModal from '../components/InvestmentModal'
 import EditInvestmentTransactionModal from '../components/EditInvestmentTransactionModal'
 import { useHideAmounts } from '../hideAmounts'
 import PageHeader from '../components/PageHeader'
-import { useNextContribution } from '../components/plan/useNextContribution'
-import { fmtEur0 } from '../components/inicio/format'
 
 export const today = () => new Date().toISOString().slice(0, 10)
 export const parseDecimal = (s: string) => Math.abs(Number((s || '0').replace(/,/g, '.')))
-
-function FundForm({ onAdd }: { onAdd: (data: InvestmentTransactionInput) => Promise<void> }) {
-  const [kind, setKind] = useState<'buy' | 'sell'>('buy')
-  const [date, setDate] = useState(today())
-  const [price, setPrice] = useState('')
-  const [amount, setAmount] = useState('')
-  const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const parsedPrice = parseDecimal(price)
-  const parsedAmount = parseDecimal(amount)
-
-  async function handleAdd() {
-    const sign = kind === 'buy' ? 1 : -1
-    setBusy(true)
-    try {
-      await onAdd({
-        date,
-        units: sign * (parsedPrice > 0 ? parsedAmount / parsedPrice : 0),
-        amount: sign * parsedAmount,
-        kind: 'flow',
-        note: note || null,
-      })
-      setPrice('')
-      setAmount('')
-      setNote('')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-2 grid grid-cols-2 gap-2">
-        {(['buy', 'sell'] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setKind(k)}
-            className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
-              kind === k ? 'border-fg bg-surface2 text-fg' : 'border-line text-muted hover:text-fg'
-            }`}
-          >
-            {k === 'buy' ? 'Aportación (compra)' : 'Venta'}
-          </button>
-        ))}
-      </div>
-      <input required type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <input required type="text" inputMode="decimal" placeholder="Precio de compra" className="input" value={price} onChange={(e) => setPrice(e.target.value)} />
-        <input required type="text" inputMode="decimal" placeholder="Importe €" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      </div>
-      <input className="input mt-2" placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <button type="button" disabled={busy || !(parsedPrice > 0) || !(parsedAmount > 0)} onClick={handleAdd} className="btn-primary mt-2 w-full">
-        + Añadir
-      </button>
-    </div>
-  )
-}
 
 function BalanceForm({ investment, onAdd }: { investment: Investment; onAdd: (data: InvestmentTransactionInput) => Promise<void> }) {
   const [mode, setMode] = useState<'flow' | 'adjustment'>('flow')
@@ -128,12 +68,28 @@ function BalanceForm({ investment, onAdd }: { investment: Investment; onAdd: (da
             <option value="sell">Retirada</option>
           </select>
           <input required type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-          <input required type="text" inputMode="decimal" placeholder="Importe €" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input
+            required
+            type="text"
+            inputMode="decimal"
+            placeholder="Importe €"
+            className="input"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <input required type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-          <input required type="text" inputMode="decimal" placeholder="Saldo actual nuevo" className="input" value={newBalance} onChange={(e) => setNewBalance(e.target.value)} />
+          <input
+            required
+            type="text"
+            inputMode="decimal"
+            placeholder="Saldo actual nuevo"
+            className="input"
+            value={newBalance}
+            onChange={(e) => setNewBalance(e.target.value)}
+          />
         </div>
       )}
       {mode === 'adjustment' && newBalance !== '' && !Number.isNaN(parsedBalance) && (
@@ -166,10 +122,38 @@ export default function InvestmentLedger() {
     queryFn: () => api.investments.fxRate(quoteCurrency!),
   })
   const [editingTx, setEditingTx] = useState<InvestmentTransaction | null>(null)
-  const next = useNextContribution()
+  const [editingInvestment, setEditingInvestment] = useState(false)
+  const navigate = useNavigate()
+  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: () => api.categories.list() })
+  const { data: market } = useQuery({ queryKey: ['investments-market'], queryFn: () => api.investments.market() })
+  const marketFund = market?.funds.find((f) => f.investment_id === Number(id))
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ['investments'] })
+  }
+
+  async function handleSaveInvestment(data: InvestmentInput) {
+    if (!investment) return
+    await api.investments.update(investment.id, data)
+    setEditingInvestment(false)
+    await queryClient.invalidateQueries()
+  }
+
+  async function handleDeleteInvestment() {
+    if (!investment) return
+    await api.investments.remove(investment.id)
+    await queryClient.invalidateQueries()
+    navigate('/inversion')
+  }
+
+  async function handleRefreshPrice() {
+    if (!investment) return
+    const result = await api.investments.refreshPrice(investment.id)
+    if (!result.ok) {
+      alert(result.error ?? 'No se pudo actualizar el precio')
+      return
+    }
+    await queryClient.invalidateQueries()
   }
 
   async function handleAddTransaction(data: InvestmentTransactionInput) {
@@ -188,12 +172,6 @@ export default function InvestmentLedger() {
     if (!investment) return
     await api.investments.updateTransaction(investment.id, transactionId, data)
     setEditingTx(null)
-    await refresh()
-  }
-
-  async function handleRefreshPrice() {
-    if (!investment) return
-    await api.investments.refreshPrice(investment.id)
     await refresh()
   }
 
@@ -220,119 +198,127 @@ export default function InvestmentLedger() {
   const showWeights = investment.type === 'fondo_inversion'
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col lg:min-h-0 lg:flex-1">
       <PageHeader crumbs={[{ label: 'Inversión', to: '/inversion' }, { label: investment.name }]}>
-        {investment.isin && <span className="num ml-auto text-xs text-faint">{investment.isin}</span>}
+        <div className="ml-auto flex items-center gap-3">
+          {investment.isin && <span className="num text-xs text-faint">{investment.isin}</span>}
+          <button type="button" onClick={() => setEditingInvestment(true)} className="btn inline-flex items-center gap-1.5">
+            <PencilIcon /> Editar
+          </button>
+        </div>
       </PageHeader>
       <div className="h-3.5" />
 
-      <div className="card mb-3.5 grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
-        {!lumpSum && <Fact label="Participaciones">{investment.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</Fact>}
-        <Fact label={lumpSum ? 'Total aportado' : 'Total invertido'}>
-          <Money value={investment.stats.total_invertido} className={blur} />
-        </Fact>
-        {!lumpSum && (
-          <Fact label="Precio medio">
-            <Money value={investment.stats.avg_cost} className={blur} />
-          </Fact>
-        )}
-        {!lumpSum && (
-          <Fact label="Valor liquidativo">
-            <Money value={investment.current_price} className={blur} />
-          </Fact>
-        )}
-        {converted && (
-          <Fact label={`Cambio ${quoteCurrency} → EUR`}>
-            {fx ? `1 € = ${fx.rate.toLocaleString('es-ES', { maximumFractionDigits: 4 })} ${quoteCurrency}` : '—'}
-          </Fact>
-        )}
-        <Fact label="Valor de mercado">
-          <Money value={investment.stats.valor_actual} className={blur} />
-        </Fact>
-        {showWeights && <Fact label="Peso objetivo">{investment.target_weight.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%</Fact>}
-        {showWeights && (
-          <Fact label="Peso actual">
-            {investment.active && typeTotal > 0 ? `${((investment.stats.valor_actual / typeTotal) * 100).toFixed(1)}%` : '—'}
-          </Fact>
-        )}
-        {showWeights && investment.target_weight > 0 && next.amount > 0 && (
-          <Fact label={`Próxima aportación (de ${fmtEur0(next.amount)})`}>
-            <Money value={next.split.get(investment.id) ?? 0} className={blur} />
-          </Fact>
-        )}
-        <Fact label="Plusvalía" className={gainColor}>
-          <Money value={investment.stats.plusvalia} className={blur} />
-        </Fact>
-        <Fact label="Rentabilidad" className={gainColor}>
-          {investment.stats.rentabilidad.toFixed(2)}%
-        </Fact>
-      </div>
-
-      <div className="mb-5 grid grid-cols-1 items-stretch gap-3.5 lg:grid-cols-2">
-        <div className="card h-full space-y-5 p-5">
-          <div className="flex items-center justify-between rounded-lg border border-line bg-surface2/50 px-3 py-2.5 text-sm">
-            <span className="text-muted">
-              {INVESTMENT_TYPE_LABELS[investment.type]}
-              {!lumpSum && (
-                <>
-                  {' '}· Valor liquidativo actual: <Money value={investment.current_price} />
-                </>
-              )}
-            </span>
-            {!lumpSum && (investment.ft_symbol || investment.isin) && (
-              <button type="button" onClick={handleRefreshPrice} className="text-xs font-medium text-fg underline hover:no-underline">
-                Actualizar
-              </button>
-            )}
-          </div>
-
-          {lumpSum ? (
-            <BalanceForm investment={investment} onAdd={handleAddTransaction} />
-          ) : (
-            <FundForm onAdd={handleAddTransaction} />
-          )}
-        </div>
-
-        <div className="card flex min-h-0 flex-col p-5 lg:order-first">
+      <div className="grid grid-cols-1 gap-3.5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
+        <div className="card flex min-h-0 flex-col p-5 lg:row-span-2">
           <p className="mb-2 text-sm font-medium text-fg">Histórico</p>
           {sorted.length === 0 ? (
             <p className="text-sm text-faint">Sin movimientos todavía</p>
           ) : (
-            <ul className="max-h-96 space-y-1.5 overflow-y-auto text-sm">
-              {sorted.map((tx) => (
-                <li
-                  key={tx.id}
-                  onClick={() => setEditingTx(tx)}
-                  className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2"
-                >
-                  <span className="text-muted">
-                    {tx.date} ·{' '}
-                    {lumpSum
-                      ? tx.kind === 'adjustment'
-                        ? 'Ajuste de valor'
-                        : tx.amount >= 0
-                          ? 'Aportación'
-                          : 'Retirada'
-                      : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
-                    · <Money value={tx.amount} />
-                    {tx.note ? ` · ${tx.note}` : ''}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemoveTransaction(tx.id)
-                    }}
-                    className="shrink-0 text-faint hover:text-red-600"
+            <div className="relative min-h-0 lg:flex-1">
+              <ul className="max-h-[420px] space-y-1.5 overflow-y-auto text-sm lg:absolute lg:inset-0 lg:max-h-none">
+                {sorted.map((tx) => (
+                  <li
+                    key={tx.id}
+                    onClick={() => setEditingTx(tx)}
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface2"
                   >
-                    <TrashIcon />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <span className="text-muted">
+                      {tx.date} ·{' '}
+                      {lumpSum
+                        ? tx.kind === 'adjustment'
+                          ? 'Ajuste de valor'
+                          : tx.amount >= 0
+                            ? 'Aportación'
+                            : 'Retirada'
+                        : `${tx.units > 0 ? '+' : ''}${tx.units.toLocaleString('es-ES', { maximumFractionDigits: 3 })} participaciones`}{' '}
+                      · <Money value={tx.amount} />
+                      {tx.note ? ` · ${tx.note}` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveTransaction(tx.id)
+                      }}
+                      className="shrink-0 text-faint hover:text-red-600"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
+        <div className="card p-5">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <p className="text-sm font-medium text-fg">Ficha</p>
+            {investment.info_url && (
+              <a
+                href={investment.info_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="max-w-[60%] truncate text-xs font-medium text-muted transition hover:text-fg"
+                title={investment.info_url}
+              >
+                {new URL(investment.info_url).hostname.replace(/^www\./, '')} ↗
+              </a>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+            {!lumpSum && <Fact label="Participaciones">{investment.stats.units_held.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</Fact>}
+            <Fact label={lumpSum ? 'Total aportado' : 'Total invertido'}>
+              <Money value={investment.stats.total_invertido} className={blur} />
+            </Fact>
+            {!lumpSum && (
+              <Fact label="Precio medio">
+                <Money value={investment.stats.avg_cost} className={blur} />
+              </Fact>
+            )}
+            {!lumpSum && (
+              <Fact label="Valor liquidativo">
+                <Money value={investment.current_price} className={blur} />
+              </Fact>
+            )}
+            {converted && (
+              <Fact label={`Cambio ${quoteCurrency} → EUR`}>
+                {fx ? `1 € = ${fx.rate.toLocaleString('es-ES', { maximumFractionDigits: 4 })} ${quoteCurrency}` : '—'}
+              </Fact>
+            )}
+            <Fact label="Valor de mercado">
+              <Money value={investment.stats.valor_actual} className={blur} />
+            </Fact>
+            {showWeights && <Fact label="Peso objetivo">{investment.target_weight.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%</Fact>}
+            {showWeights && (
+              <Fact label="Peso actual">{investment.active && typeTotal > 0 ? `${((investment.stats.valor_actual / typeTotal) * 100).toFixed(1)}%` : '—'}</Fact>
+            )}
+            <Fact label="Plusvalía" className={gainColor}>
+              <Money value={investment.stats.plusvalia} className={blur} />
+            </Fact>
+            <Fact label="Rentabilidad" className={gainColor}>
+              {investment.stats.rentabilidad.toFixed(2)}%
+            </Fact>
+          </div>
+          {lumpSum && (
+            <div className="mt-5 border-t border-line pt-4">
+              <BalanceForm investment={investment} onAdd={handleAddTransaction} />
+            </div>
+          )}
+        </div>
+        {marketFund && <FundPriceChart fund={marketFund} />}
       </div>
+
+      {editingInvestment && (
+        <InvestmentModal
+          initial={investment}
+          accounts={(categories ?? []).filter((c) => c.type === 'inversion')}
+          onClose={() => setEditingInvestment(false)}
+          onSave={handleSaveInvestment}
+          onDelete={handleDeleteInvestment}
+          onRefreshPrice={investment.ft_symbol || investment.isin ? handleRefreshPrice : undefined}
+        />
+      )}
 
       {editingTx && (
         <EditInvestmentTransactionModal
@@ -355,6 +341,18 @@ function Fact({ label, className, children }: { label: string; className?: strin
     <div>
       <div className="text-xs font-medium text-muted">{label}</div>
       <div className={`num mt-1 text-lg font-semibold tracking-tight ${className ?? 'text-fg'}`}>{children}</div>
+    </div>
+  )
+}
+
+function FundPriceChart({ fund }: { fund: MarketFund }) {
+  const [shown, setShown] = useState<Record<RefKey, boolean>>(() => stored('dip_lines', { all_time_high: true, avg_cost: true }))
+  const [rangeLabel, setRangeLabel] = useState<string>(() => stored('dip_range', '1A'))
+  useEffect(() => store('dip_lines', shown), [shown])
+  useEffect(() => store('dip_range', rangeLabel), [rangeLabel])
+  return (
+    <div className="card flex min-w-0 flex-col">
+      <FundChart fund={fund} shown={shown} setShown={setShown} rangeLabel={rangeLabel} setRangeLabel={setRangeLabel} />
     </div>
   )
 }

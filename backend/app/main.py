@@ -67,12 +67,18 @@ if engine.url.get_backend_name() == "sqlite":
         inv_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(investments)"))]
         if "account" not in inv_cols:
             conn.execute(text("ALTER TABLE investments ADD COLUMN account TEXT"))
+        if "info_url" not in inv_cols:
+            conn.execute(text("ALTER TABLE investments ADD COLUMN info_url TEXT"))
         # one-time merge: fondo_indexado folded into fondo_inversion (single "Fondos
         # de inversión" type). No-op on repeat runs once no row has the old value.
         conn.execute(text("UPDATE investments SET type = 'fondo_inversion' WHERE type = 'fondo_indexado'"))
         tx_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(investment_transactions)"))]
         if "kind" not in tx_cols:
             conn.execute(text("ALTER TABLE investment_transactions ADD COLUMN kind TEXT NOT NULL DEFAULT 'flow'"))
+else:
+    # ponytail: the existing Postgres (Neon) db predates this column; create_all never adds columns
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE investments ADD COLUMN IF NOT EXISTS info_url VARCHAR"))
 
 with SessionLocal() as db:
     seed_categories(db)

@@ -21,7 +21,7 @@ export default function InversionDashboard({
   children?: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-3.5 xl:flex-1">
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <StatTile label="Capital invertido" value={summary?.total_invertido ?? 0} blurred={hideAmounts} />
         <StatTile label="Valor actual" value={summary?.valor_actual ?? 0} blurred={hideAmounts} />
