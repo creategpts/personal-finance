@@ -9,7 +9,7 @@ const isTracked = (i: Investment) => i.active && i.type !== 'seguros' && i.type 
 async function syncAll(queryClient: QueryClient, ids: number[], force = false) {
   const results = await Promise.all(ids.map((id) => api.investments.syncMarket(id, force).catch(() => null)))
   await Promise.all(
-    ['investments', 'investments-market', 'investments-summary', 'investments-composition'].map((key) =>
+    ['investments', 'investments-market', 'investments-summary', 'investments-composition', 'account-values'].map((key) =>
       queryClient.invalidateQueries({ queryKey: [key] }),
     ),
   )
